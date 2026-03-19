@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1094324213312",
+    "project_id": "my-web-bank",
+    "storage_bucket": "my-web-bank.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094324213312:android:5fe38dcd216dbe9f2a31a5",
+        "android_client_info": {
+          "package_name": "app.sm.bank"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0LP4Dv09vbM34Oy9lQ24gFW56TIcr2Dg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
