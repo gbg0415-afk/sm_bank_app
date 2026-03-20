@@ -611,7 +611,7 @@ class BookmarksScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.bookmarkCheck, color: Color(0xFF0d9488)),
+                    Icon(LucideIcons.bookmark, color: const Color(0xFF0d9488)),
                     const SizedBox(width: 16),
                     const Expanded(
                       child: Text("Saved Question Title Here", style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1e293b))),
