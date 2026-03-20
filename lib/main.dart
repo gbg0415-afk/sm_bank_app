@@ -131,16 +131,16 @@ class AuthService extends ChangeNotifier {
     await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  Future<void> register(String name, String email, String password, Map dept, Map stage) async {
+  Future<void> register(String name, String email, String password, String deptId, String deptName, String stageId, String stageName) async {
     UserCredential res = await _auth.createUserWithEmailAndPassword(email: email, password: password);
     await _db.collection('users').doc(res.user!.uid).set({
       'uid': res.user!.uid,
       'name': name,
       'email': email,
-      'departmentId': dept['id'],
-      'departmentName': dept['name'],
-      'stageId': stage['id'],
-      'stageName': stage['name'],
+      'departmentId': deptId,
+      'departmentName': deptName,
+      'stageId': stageId,
+      'stageName': stageName,
       'assignedSubjects': [],
       'stats': {'totalQuestions': 0, 'usedQuestions': 0, 'unusedQuestions': 0},
       'createdAt': FieldValue.serverTimestamp(),
@@ -173,7 +173,7 @@ class SMBankApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D9488)), // Teal 600
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D9488)),
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       ),
       home: const AuthWrapper(),
@@ -219,7 +219,7 @@ class _MainLayoutState extends State<MainLayout> {
         onTap: (i) => setState(() => _currentIndex = i),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF0D9488),
-        unselectedItemColor: Colors.slate,
+        unselectedItemColor: Colors.blueGrey, // Fixed: slate replacement
         items: const [
           BottomNavigationBarItem(icon: Icon(LucideIcons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(LucideIcons.book), label: 'Subjects'),
@@ -231,7 +231,7 @@ class _MainLayoutState extends State<MainLayout> {
   }
 }
 
-// --- SCREENS ---
+// --- HOME PAGE ---
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -242,7 +242,7 @@ class HomePage extends StatelessWidget {
     if (profile == null) return const Center(child: CircularProgressIndicator());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('SM Academy', style: TextStyle(fontWeight: FontWeight.black))),
+      appBar: AppBar(title: const Text('SM Academy', style: TextStyle(fontWeight: FontWeight.w900))), // Fixed: black replacement
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -263,14 +263,14 @@ class HomePage extends StatelessWidget {
                     ])),
                   ),
                   const SizedBox(width: 20),
-                  const Expanded(child: Text("You've completed your progress overview. Keep going!")),
+                  const Expanded(child: Text("Track your progress across all your assigned medical subjects.")),
                 ],
               ),
             ).animate().fadeIn().slideY(),
             const SizedBox(height: 20),
             _buildStatCard('Total Questions', profile.stats.total.toString(), LucideIcons.bookOpen, Colors.blue),
             _buildStatCard('Used Questions', profile.stats.used.toString(), LucideIcons.checkCircle2, Colors.teal),
-            _buildStatCard('Unused Questions', profile.stats.unused.toString(), LucideIcons.circleDashed, Colors.grey),
+            _buildStatCard('Unused Questions', profile.stats.unused.toString(), LucideIcons.circleDashed, Colors.blueGrey),
           ],
         ),
       ),
@@ -291,6 +291,8 @@ class HomePage extends StatelessWidget {
   }
 }
 
+// --- SUBJECTS & LECTURES ---
+
 class CategoriesPage extends StatelessWidget {
   const CategoriesPage({super.key});
 
@@ -300,24 +302,26 @@ class CategoriesPage extends StatelessWidget {
     if (profile == null) return const Center(child: CircularProgressIndicator());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Subjects')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: profile.assignedSubjects.length,
-        itemBuilder: (context, index) {
-          final sub = profile.assignedSubjects[index];
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: const Icon(LucideIcons.book, color: Color(0xFF0D9488)),
-              title: Text(sub['subjectName'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              trailing: const Icon(LucideIcons.chevronRight),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LecturesPage(subject: sub))),
-            ),
-          );
-        },
-      ),
+      appBar: AppBar(title: const Text('My Subjects')),
+      body: profile.assignedSubjects.isEmpty 
+        ? const Center(child: Text("No subjects assigned yet."))
+        : ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: profile.assignedSubjects.length,
+            itemBuilder: (context, index) {
+              final sub = profile.assignedSubjects[index];
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: const Icon(LucideIcons.book, color: Color(0xFF0D9488)),
+                  title: Text(sub['subjectName'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                  trailing: const Icon(LucideIcons.chevronRight),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LecturesPage(subject: sub))),
+                ),
+              );
+            },
+          ),
     );
   }
 }
@@ -342,7 +346,9 @@ class LecturesPage extends StatelessWidget {
             .orderBy('order')
             .get(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text("No lectures found."));
+          
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: snapshot.data!.docs.length,
@@ -372,7 +378,7 @@ class LecturesPage extends StatelessWidget {
   }
 }
 
-// --- QUIZ PAGE (The Core Logic) ---
+// --- QUIZ SYSTEM ---
 
 class QuizPage extends StatefulWidget {
   final String lectureId;
@@ -387,7 +393,7 @@ class _QuizPageState extends State<QuizPage> {
   List<Question> questions = [];
   int currentIndex = 0;
   bool loading = true;
-  Map<String, dynamic> userAnswers = {}; // questionId -> {selectedId, isCorrect}
+  Map<String, dynamic> userAnswers = {}; 
 
   @override
   void initState() {
@@ -433,15 +439,7 @@ class _QuizPageState extends State<QuizPage> {
     final ans = userAnswers[q.id];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Question ${currentIndex + 1}/${questions.length}'),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.bookmark),
-            onPressed: () {}, // Implement bookmark logic
-          )
-        ],
-      ),
+      appBar: AppBar(title: Text('Question ${currentIndex + 1}/${questions.length}')),
       body: Column(
         children: [
           LinearProgressIndicator(value: (currentIndex + 1) / questions.length),
@@ -519,7 +517,7 @@ class _QuizPageState extends State<QuizPage> {
   }
 }
 
-// --- LOGIN & REGISTER ---
+// --- LOGIN PAGE ---
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -541,9 +539,9 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.network("https://pub-6d31ff5e059e478f8519858d135599d5.r2.dev/logo.png", height: 100),
+            const Icon(LucideIcons.bookOpen, size: 80, color: Color(0xFF0D9488)),
             const SizedBox(height: 20),
-            const Text("SM Academy", style: TextStyle(fontSize: 32, fontWeight: FontWeight.black, color: Color(0xFF0D9488))),
+            const Text("SM Academy", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF0D9488))),
             const SizedBox(height: 40),
             TextField(controller: _email, decoration: const InputDecoration(labelText: "Email", prefixIcon: Icon(LucideIcons.mail))),
             const SizedBox(height: 16),
@@ -566,6 +564,10 @@ class _LoginPageState extends State<LoginPage> {
                 child: loading ? const CircularProgressIndicator(color: Colors.white) : const Text("Sign In"),
               ),
             ),
+            TextButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())),
+              child: const Text("Create an account"),
+            )
           ],
         ),
       ),
@@ -573,10 +575,71 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// --- REGISTER PAGE ---
+
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> {
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _pass = TextEditingController();
+  bool loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            const Text("Register", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 30),
+            TextField(controller: _name, decoration: const InputDecoration(labelText: "Full Name", prefixIcon: Icon(LucideIcons.user))),
+            const SizedBox(height: 16),
+            TextField(controller: _email, decoration: const InputDecoration(labelText: "Email", prefixIcon: Icon(LucideIcons.mail))),
+            const SizedBox(height: 16),
+            TextField(controller: _pass, obscureText: true, decoration: const InputDecoration(labelText: "Password", prefixIcon: Icon(LucideIcons.lock))),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
+                onPressed: () async {
+                  setState(() => loading = true);
+                  try {
+                    // Simplified registration for main.dart template
+                    await Provider.of<AuthService>(context, listen: false).register(
+                      _name.text, _email.text, _pass.text, "dept_01", "General Medicine", "stage_01", "Level 1"
+                    );
+                    if (mounted) Navigator.pop(context);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                  setState(() => loading = false);
+                },
+                child: loading ? const CircularProgressIndicator(color: Colors.white) : const Text("Register"),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- BOOKMARKS & PROFILE ---
+
 class BookmarksPage extends StatelessWidget {
   const BookmarksPage({super.key});
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text("Bookmarks - Implementation same as Categories")));
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text("Bookmarks Page")));
 }
 
 class ProfilePage extends StatelessWidget {
@@ -595,6 +658,7 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 40),
           ListTile(leading: const Icon(LucideIcons.mail), title: const Text("Email"), subtitle: Text(auth.profile?.email ?? "")),
           ListTile(leading: const Icon(LucideIcons.building), title: const Text("Department"), subtitle: Text(auth.profile?.departmentName ?? "")),
+          ListTile(leading: const Icon(LucideIcons.graduationCap), title: const Text("Stage"), subtitle: Text(auth.profile?.stageName ?? "")),
           const Divider(),
           ListTile(
             leading: const Icon(LucideIcons.logOut, color: Colors.red),
