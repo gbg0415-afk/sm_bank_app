@@ -40,6 +40,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'auth_service.dart';
 
 // ---------------------------------------------------------------------------
 // ENTRY POINT
@@ -96,11 +97,11 @@ class AuthWrapper extends StatelessWidget {
         
         // 2. حالة الدخول: المستخدم مسجل بالفعل
         if (snapshot.hasData) {
-          return const MainLayout();
+          return MainLayout();
         }
 
         // 3. حالة الخروج: لا يوجد مستخدم مسجل
-        return const LoginPage();
+        return LoginPage();
       },
     );
   }
@@ -658,10 +659,6 @@ class _AuthGate extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // LOGIN SCREEN
 // ---------------------------------------------------------------------------
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-// تأكد من استيراد ملفاتك الخاصة هنا (مثل AppState والألوان _slate50 وغيرها)
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -907,11 +904,6 @@ class _LoginScreenState extends State<LoginScreen> {
 // ---------------------------------------------------------------------------
 // REGISTER SCREEN
 // ---------------------------------------------------------------------------
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-// تأكد من استيراد ملفاتك الخاصة هنا مثل AppState وغيرها
-
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
