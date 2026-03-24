@@ -46,13 +46,64 @@ import 'package:flutter_animate/flutter_animate.dart';
 // ---------------------------------------------------------------------------
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
+  await Firebase.initializeApp();
   runApp(
     ChangeNotifierProvider(
-      create: (_) => AppState(prefs),
-      child: const SmAcademyApp(),
+      create: (_) => AuthService(),
+      child: const SMBankApp(),
     ),
   );
+}
+
+class SMBankApp extends StatelessWidget {
+  const SMBankApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'SM Bank',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D9488)),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      ),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // نستخدم StreamBuilder للتعرف على حالة فايربيس (جاري التحقق، مسجل، غير مسجل)
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // 1. حالة التحميل: التطبيق يفتح ويتحقق من فايربيس (هنا تظهر شاشة التحميل)
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          );
+        }
+        
+        // 2. حالة الدخول: المستخدم مسجل بالفعل
+        if (snapshot.hasData) {
+          return const MainLayout();
+        }
+
+        // 3. حالة الخروج: لا يوجد مستخدم مسجل
+        return const LoginPage();
+      },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
