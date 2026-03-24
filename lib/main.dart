@@ -607,6 +607,10 @@ class _AuthGate extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // LOGIN SCREEN
 // ---------------------------------------------------------------------------
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+// تأكد من استيراد ملفاتك الخاصة هنا (مثل AppState والألوان _slate50 وغيرها)
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -630,6 +634,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     setState(() { _loading = true; _error = ''; });
+    // تأكد أن الكلاس AppState يحتوي على دالة login
     final error = await context.read<AppState>().login(
       _emailCtrl.text.trim(),
       _passCtrl.text,
@@ -645,7 +650,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _slate50,
+      backgroundColor: const Color(0xFFF8FAFC), // _slate50
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -657,7 +662,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: _slate200.withOpacity(0.8),
+                    color: const Color(0xFFE2E8F0).withOpacity(0.8), // _slate200
                     blurRadius: 40,
                     offset: const Offset(0, 8),
                   )
@@ -667,49 +672,36 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo placeholder (circle with initials)
-                  Container(
-                    width: 88,
+                  // --- التعديل الأول: إضافة اللوجو عبر الرابط ---
+                  Image.network(
+                    'https://pub-6d31ff5e059e478f8519858d135599d5.r2.dev/logo.png',
                     height: 88,
-                    decoration: BoxDecoration(
-                      color: _teal50,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _teal100, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'SM',
-                        style: TextStyle(
-                          color: _teal700,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 28,
-                        ),
-                      ),
-                    ),
+                    fit: BoxFit.contain,
+                    // يمكنك إضافة errorBuilder هنا للتعامل مع أخطاء تحميل الصورة إذا أردت
                   ),
                   const SizedBox(height: 12),
-                  Text(
+                  const Text(
                     'SM ACADEMY',
                     style: TextStyle(
-                      color: _teal700,
+                      color: Color(0xFF0F766E), // _teal700
                       fontWeight: FontWeight.w900,
                       fontSize: 22,
                       letterSpacing: 2,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     'Welcome Back',
                     style: TextStyle(
-                      color: _slate900,
+                      color: Color(0xFF0F172A), // _slate900
                       fontWeight: FontWeight.w800,
                       fontSize: 22,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     'Sign in to continue your studies',
-                    style: TextStyle(color: _slate500, fontSize: 14),
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 14), // _slate500
                   ),
                   const SizedBox(height: 28),
                   if (_error.isNotEmpty)
@@ -717,33 +709,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: _red50,
+                        color: const Color(0xFFFEF2F2), // _red50
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _red500.withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.2)), // _red500
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline, color: _red600, size: 18),
+                          const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18), // _red600
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(_error,
-                                style: TextStyle(color: _red600, fontSize: 13)),
+                                style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)), // _red600
                           ),
                         ],
                       ),
                     ),
-                  _FieldLabel('Email Address'),
+                  
+                  // افتراض وجود كلاس _FieldLabel مسبقاً (تم إضافته في الملفات الأخرى)
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Email Address', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
                   const SizedBox(height: 6),
-                  _InputField(
+                  // افتراض وجود كلاس _InputField مسبقاً
+                  _buildInputField(
                     controller: _emailCtrl,
                     hint: 'student@university.edu',
                     icon: Icons.mail_outline_rounded,
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 18),
-                  _FieldLabel('Password'),
+                  
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
                   const SizedBox(height: 6),
-                  _InputField(
+                  _buildInputField(
                     controller: _passCtrl,
                     hint: '••••••••',
                     icon: Icons.lock_outline_rounded,
@@ -751,20 +753,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: _slate400,
+                        color: const Color(0xFF94A3B8), // _slate400
                         size: 20,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                   const SizedBox(height: 24),
+                  
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
                       onPressed: _loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _teal600,
+                        backgroundColor: const Color(0xFF0D9488), // _teal600
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
@@ -790,14 +793,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Don't have an account? ",
-                          style: TextStyle(color: _slate500, fontSize: 14)),
+                      const Text("Don't have an account? ",
+                          style: TextStyle(color: Color(0xFF64748B), fontSize: 14)), // _slate500
                       GestureDetector(
                         onTap: () => Navigator.pushNamed(context, '/register'),
-                        child: Text(
+                        child: const Text(
                           'Register Now',
                           style: TextStyle(
-                            color: _teal600,
+                            color: Color(0xFF0D9488), // _teal600
                             fontWeight: FontWeight.w800,
                             fontSize: 14,
                           ),
@@ -805,24 +808,45 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // Demo hint
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _slate50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '',  //
-                      style: TextStyle(color: _slate400, fontSize: 11),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                  
+                  // --- التعديل الثاني: تم حذف قسم Demo Hint من هنا بالكامل ---
+                  
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // دالة مساعدة لرسم الحقول (مأخوذة من الكود الأساسي إذا لم تكن موجودة كـ Widget منفصل)
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscure = false,
+    Widget? suffixIcon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC), // _slate50
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)), // _slate200
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        keyboardType: keyboardType,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 15), // _slate400
+          prefixIcon: Icon(icon, color: const Color(0xFF94A3B8), size: 22), // _slate400
+          suffixIcon: suffixIcon,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       ),
     );
@@ -832,6 +856,11 @@ class _LoginScreenState extends State<LoginScreen> {
 // ---------------------------------------------------------------------------
 // REGISTER SCREEN
 // ---------------------------------------------------------------------------
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+// تأكد من استيراد ملفاتك الخاصة هنا مثل AppState وغيرها
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -848,6 +877,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _error = '';
   bool _obscure = true;
 
+  String? _selectedDepartment;
+  String? _selectedStage;
+
+  // --- القوائم وحالة التحميل لبيانات فايربيس ---
+  List<String> _departmentsList = [];
+  List<String> _stagesList = [];
+  bool _isLoadingDepartments = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDepartmentsFromFirebase();
+  }
+
+  Future<void> _fetchDepartmentsFromFirebase() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('departments').get();
+      final fetchedDeps = snapshot.docs.map((doc) => doc['name'].toString()).toList();
+      
+      if (mounted) {
+        setState(() {
+          _departmentsList = fetchedDeps;
+          _isLoadingDepartments = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingDepartments = false);
+      debugPrint("Error fetching departments: $e");
+    }
+  }
+
+  Future<void> _fetchStagesFromFirebase(String departmentName) async {
+    setState(() {
+      _stagesList = [];
+      _selectedStage = null;
+    });
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('stages')
+          .where('department', isEqualTo: departmentName)
+          .get();
+          
+      final fetchedStages = snapshot.docs.map((doc) => doc['name'].toString()).toList();
+      
+      if (mounted) {
+        setState(() {
+          _stagesList = fetchedStages;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching stages: $e");
+    }
+  }
+
   Future<void> _submit() async {
     if (_passCtrl.text != _confirmCtrl.text) {
       setState(() => _error = 'Passwords do not match');
@@ -857,12 +941,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _error = 'Password must be at least 6 characters');
       return;
     }
+    
+    if (_selectedDepartment == null || _selectedStage == null) {
+      setState(() => _error = 'Please select your department and academic stage');
+      return;
+    }
+
     setState(() { _loading = true; _error = ''; });
+    
+    // تأكد من تمرير المتغيرات الجديدة لدالة register في ملف AppState الخاص بك
     final error = await context.read<AppState>().register(
       _nameCtrl.text.trim(),
       _emailCtrl.text.trim(),
       _passCtrl.text,
+      // _selectedDepartment,
+      // _selectedStage,
     );
+    
     if (!mounted) return;
     if (error != null) {
       setState(() { _error = error; _loading = false; });
@@ -871,10 +966,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Widget _buildDropdownField({
+    required String hint,
+    required IconData icon,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    bool isLoading = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: value,
+          icon: isLoading 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade500),
+          hint: Row(
+            children: [
+              Icon(icon, color: Colors.grey.shade400, size: 22),
+              const SizedBox(width: 12),
+              Text(isLoading ? 'Loading...' : hint, style: TextStyle(color: Colors.grey.shade400, fontSize: 15)),
+            ],
+          ),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.grey.shade400, size: 22),
+                  const SizedBox(width: 12),
+                  Text(item, style: const TextStyle(fontSize: 15)),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: isLoading ? null : onChanged,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _slate50,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -886,7 +1028,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: _slate200.withOpacity(0.8),
+                    color: const Color(0xFFE2E8F0).withOpacity(0.8),
                     blurRadius: 40,
                     offset: const Offset(0, 8),
                   )
@@ -896,18 +1038,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
+                  const Text(
                     'Create Account',
                     style: TextStyle(
-                      color: _slate900,
+                      color: Color(0xFF0F172A),
                       fontWeight: FontWeight.w900,
                       fontSize: 26,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    'Join SM Academy today',
-                    style: TextStyle(color: _slate500, fontSize: 14),
+                  const Text(
+                    'Join our medical learning community',
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
                   ),
                   const SizedBox(height: 28),
                   if (_error.isNotEmpty)
@@ -915,26 +1057,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: _red50,
+                        color: const Color(0xFFFEF2F2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _red500.withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.2)),
                       ),
                       child: Text(_error,
-                          style: TextStyle(color: _red600, fontSize: 13)),
+                          style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13)),
                     ),
+                  
+                  // 1. Full Name
                   _FieldLabel('Full Name'),
                   const SizedBox(height: 6),
-                  _InputField(controller: _nameCtrl, hint: 'Your full name', icon: Icons.person_outline_rounded),
+                  _InputField(controller: _nameCtrl, hint: 'John Doe', icon: Icons.person_outline_rounded),
                   const SizedBox(height: 16),
+                  
+                  // 2. Email Address
                   _FieldLabel('Email Address'),
                   const SizedBox(height: 6),
                   _InputField(
                     controller: _emailCtrl,
-                    hint: 'student@university.edu',
+                    hint: 'john@med.edu',
                     icon: Icons.mail_outline_rounded,
                     keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 16),
+
+                  // 3. Department
+                  const Align(alignment: Alignment.centerLeft, child: Text('Department', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+                  const SizedBox(height: 6),
+                  _buildDropdownField(
+                    hint: 'Select Dept',
+                    icon: Icons.domain_outlined,
+                    value: _selectedDepartment,
+                    items: _departmentsList,
+                    isLoading: _isLoadingDepartments,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedDepartment = value;
+                      });
+                      if (value != null) {
+                        _fetchStagesFromFirebase(value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // 4. Academic Stage
+                  const Align(alignment: Alignment.centerLeft, child: Text('Academic Stage', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+                  const SizedBox(height: 6),
+                  _buildDropdownField(
+                    hint: _selectedDepartment == null ? 'Select Dept First' : 'Select Stage',
+                    icon: Icons.school_outlined,
+                    value: _selectedStage,
+                    items: _stagesList,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedStage = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // 5. Password
                   _FieldLabel('Password'),
                   const SizedBox(height: 6),
                   _InputField(
@@ -945,13 +1129,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: _slate400,
+                        color: Colors.grey.shade400,
                         size: 20,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
+                  // 6. Confirm Password
                   _FieldLabel('Confirm Password'),
                   const SizedBox(height: 6),
                   _InputField(
@@ -961,13 +1147,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     obscure: _obscure,
                   ),
                   const SizedBox(height: 24),
+                  
+                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
                       onPressed: _loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _teal600,
+                        backgroundColor: const Color(0xFF0D9488),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
@@ -980,22 +1168,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2.5, color: Colors.white),
                             )
-                          : const Text('Create Account',
+                          : const Text('Complete Registration',
                               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                     ),
                   ),
                   const SizedBox(height: 20),
+                  
+                  // Sign In Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Already have an account? ',
-                          style: TextStyle(color: _slate500, fontSize: 14)),
+                      const Text('Already have an account? ',
+                          style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Text(
+                        child: const Text(
                           'Sign In',
                           style: TextStyle(
-                            color: _teal600,
+                            color: Color(0xFF0D9488),
                             fontWeight: FontWeight.w800,
                             fontSize: 14,
                           ),
