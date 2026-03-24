@@ -34,6 +34,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 // ---------------------------------------------------------------------------
 // ENTRY POINT
@@ -808,7 +814,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      'Demo: demo@student.com / demo1234',
+                      '',  //
                       style: TextStyle(color: _slate400, fontSize: 11),
                       textAlign: TextAlign.center,
                     ),
