@@ -40,7 +40,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'auth_service.dart';
 
 // ---------------------------------------------------------------------------
 // ENTRY POINT
@@ -104,6 +103,28 @@ class AuthWrapper extends StatelessWidget {
         return LoginPage();
       },
     );
+  }
+}
+
+class AuthService extends ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // الحصول على بيانات المستخدم الحالي
+  User? get user => _auth.currentUser;
+
+  // دالة تسجيل الدخول بالبريد والإيميل
+  Future<String?> login(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      return null; // نجاح
+    } on FirebaseAuthException catch (e) {
+      return e.message; // إرجاع رسالة الخطأ
+    }
+  }
+
+  // دالة تسجيل الخروج
+  Future<void> logout() async {
+    await _auth.signOut();
   }
 }
 
