@@ -1802,7 +1802,7 @@ class _QuizPageState extends State<QuizPage> {
     final q = _questions[_currentIndex];
     for (final opt in q.options) {
       if (opt.isCorrect) {
-        _saveProgress(q.id, null, true);
+        _saveProgress(q.id, '', true);
         setState(() {
           _expandedExplanations.clear();
           _expandedExplanations.add(opt.id);
