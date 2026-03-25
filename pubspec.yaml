@@ -1,34 +1,26 @@
 name: sm_bank
-description: "A new Flutter project for SM Bank."
-
+description: SM Academy - Medical Quiz App
 publish_to: 'none'
 version: 1.0.0+1
-
+ 
 environment:
-  sdk: ^3.10.8
-
+  sdk: '>=3.0.0 <4.0.0'
+ 
 dependencies:
   flutter:
     sdk: flutter
-
-  # واجهة المستخدم والأيقونات
-  cupertino_icons: ^1.0.8
-  lucide_icons: ^0.257.0
-
-  # خدمات فايربيس الأساسية (تم تصحيح الإصدارات لأحدث نسخ مستقرة ومتوافقة)
+ 
+  # Firebase Core (required for all Firebase services)
   firebase_core: ^3.6.0
+ 
+  # Firebase Authentication
   firebase_auth: ^5.3.1
+ 
+  # Cloud Firestore (database)
   cloud_firestore: ^5.4.4
-
-  # إدارة الحالة والبيانات
-  provider: ^6.1.2
-  shared_preferences: ^2.3.2
-
-  # الرسوم البيانية والحركات والذكاء الاصطناعي
-  fl_chart: ^0.69.0
-  flutter_animate: ^4.5.0
-  google_generative_ai: ^0.4.6
-
+ 
+  cupertino_icons: ^1.0.8
+ 
 dev_dependencies:
   flutter_test:
     sdk: flutter
