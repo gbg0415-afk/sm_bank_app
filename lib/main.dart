@@ -67,14 +67,9 @@ class UserProfile {
       departmentName: data['departmentName'] ?? '',
       stageId: data['stageId'] ?? '',
       stageName: data['stageName'] ?? '',
-<<<<<<< HEAD
       assignedSubjects: rawSubjects
           .map((s) => AssignedSubject.fromMap(s as Map<String, dynamic>))
           .toList(),
-=======
-      assignedSubjects:
-          rawSubjects.map((s) => AssignedSubject.fromMap(s as Map<String, dynamic>)).toList(),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
       stats: UserStats.fromMap(data['stats'] as Map<String, dynamic>? ?? {}),
     );
   }
@@ -173,7 +168,6 @@ class Question {
     final rawOpts = data['options'] as List<dynamic>? ?? [];
     return Question(
       id: id,
-<<<<<<< HEAD
       text: data['questionText'] ??
           data['text'] ??
           data['title'] ??
@@ -182,29 +176,12 @@ class Question {
       options: rawOpts
           .map((o) => QuizOption.fromMap(o as Map<String, dynamic>))
           .toList(),
-=======
-      text: data['questionText'] ?? data['text'] ?? data['title'] ?? data['question'] ?? '',
-      options:
-          rawOpts.map((o) => QuizOption.fromMap(o as Map<String, dynamic>)).toList(),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
     );
   }
 }
 
-class BookmarkedQuestion {
-  final String questionId;
-  final Question question;
-  final String? questionPath;
-<<<<<<< HEAD
-  BookmarkedQuestion(
-      {required this.questionId, required this.question, this.questionPath});
-=======
-  BookmarkedQuestion({required this.questionId, required this.question, this.questionPath});
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-}
-
 // ===========================================================================
-// AUTH STATE (simple InheritedNotifier approach)
+// AUTH STATE
 // ===========================================================================
 
 class AuthState extends ChangeNotifier {
@@ -225,7 +202,7 @@ class AuthState extends ChangeNotifier {
       if (u != null) {
         final ref = FirebaseFirestore.instance.collection('users').doc(u.uid);
         _profileSub = ref.snapshots().listen((snap) {
-          if (snap.exists) {
+          if (snap.exists && snap.data() != null) {
             _profile = UserProfile.fromMap(snap.id, snap.data()!);
           } else {
             _profile = null;
@@ -252,10 +229,11 @@ class AuthState extends ChangeNotifier {
 // ===========================================================================
 // COLORS & THEME
 // ===========================================================================
-const kTeal = Color(0xFF0D9488); // teal-600
-const kTealDark = Color(0xFF0F766E); // teal-700
+const kTeal = Color(0xFF0D9488);
+const kTealDark = Color(0xFF0F766E);
 const kSlate900 = Color(0xFF0F172A);
 const kSlate700 = Color(0xFF334155);
+const kSlate600 = Color(0xFF475569);
 const kSlate500 = Color(0xFF64748B);
 const kSlate400 = Color(0xFF94A3B8);
 const kSlate200 = Color(0xFFE2E8F0);
@@ -336,12 +314,10 @@ class _SmAcademyAppState extends State<SmAcademyApp> {
                   ? LoginScreen(authState: _authState)
                   : _authState.profile == null
                       ? const Scaffold(
-<<<<<<< HEAD
                           body: Center(
-                              child: CircularProgressIndicator(color: kTeal)))
-=======
-                          body: Center(child: CircularProgressIndicator(color: kTeal)))
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+                            child: CircularProgressIndicator(color: kTeal),
+                          ),
+                        )
                       : MainShell(authState: _authState),
         );
       },
@@ -349,9 +325,6 @@ class _SmAcademyAppState extends State<SmAcademyApp> {
   }
 }
 
-// ===========================================================================
-// SPLASH SCREEN
-// ===========================================================================
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
@@ -416,12 +389,14 @@ Widget _buildTextField({
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: kSlate700,
-          )),
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: kSlate700,
+        ),
+      ),
       const SizedBox(height: 6),
       TextFormField(
         controller: controller,
@@ -464,8 +439,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailCtrl.text.trim(), password: _passCtrl.text.trim());
-      // Navigation is handled automatically by AuthState listener in SmAcademyApp
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message ?? 'Login failed');
     } finally {
@@ -490,34 +466,40 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                        color: kSlate200.withOpacity(0.6),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8))
+                      color: kSlate200.withOpacity(0.6),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    // Logo + title
                     _logoWidget(size: 90),
                     const SizedBox(height: 12),
-                    const Text('SM ACADEMY',
-                        style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: kTeal,
-                            letterSpacing: 3)),
+                    const Text(
+                      'SM ACADEMY',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: kTeal,
+                        letterSpacing: 3,
+                      ),
+                    ),
                     const SizedBox(height: 16),
-                    const Text('Welcome Back',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: kSlate900)),
+                    const Text(
+                      'Welcome Back',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: kSlate900,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    const Text('Sign in to continue your studies',
-                        style: TextStyle(fontSize: 14, color: kSlate500)),
+                    const Text(
+                      'Sign in to continue your studies',
+                      style: TextStyle(fontSize: 14, color: kSlate500),
+                    ),
                     const SizedBox(height: 28),
-
-                    // Error
                     if (_error.isNotEmpty) ...[
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -526,13 +508,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           border: Border.all(color: const Color(0xFFFFCDD2)),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(_error,
-                            style: const TextStyle(color: kRed, fontSize: 13)),
+                        child: Text(
+                          _error,
+                          style: const TextStyle(color: kRed, fontSize: 13),
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
-
-                    // Email
                     _buildTextField(
                       controller: _emailCtrl,
                       label: 'Email Address',
@@ -541,8 +523,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 16),
-
-                    // Password
                     _buildTextField(
                       controller: _passCtrl,
                       label: 'Password',
@@ -551,8 +531,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscure: true,
                     ),
                     const SizedBox(height: 24),
-
-                    // Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -562,7 +540,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           foregroundColor: kWhite,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           elevation: 0,
                         ),
                         child: _loading
@@ -570,15 +549,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: kWhite))
-                            : const Text('Sign In',
+                                  strokeWidth: 2,
+                                  color: kWhite,
+                                ),
+                              )
+                            : const Text(
+                                'Sign In',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w800)),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Register link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -592,9 +576,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   RegisterScreen(authState: widget.authState),
                             ),
                           ),
-                          child: const Text('Register Now',
-                              style: TextStyle(
-                                  color: kTeal, fontWeight: FontWeight.w800)),
+                          child: const Text(
+                            'Register Now',
+                            style: TextStyle(
+                              color: kTeal,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -716,11 +704,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'stats': {
           'totalQuestions': 0,
           'usedQuestions': 0,
-          'unusedQuestions': 0
+          'unusedQuestions': 0,
         },
         'createdAt': FieldValue.serverTimestamp(),
       });
-      // Auth listener will redirect automatically
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message ?? 'Registration failed');
     } catch (e) {
@@ -742,15 +729,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-<<<<<<< HEAD
-                fontSize: 13, fontWeight: FontWeight.w700, color: kSlate700)),
-=======
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: kSlate700)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: kSlate700,
+          ),
+        ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: value,
@@ -784,32 +770,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                        color: kSlate200.withOpacity(0.6),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8))
+                      color: kSlate200.withOpacity(0.6),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
                     _logoWidget(size: 80),
                     const SizedBox(height: 12),
-                    const Text('SM ACADEMY',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: kTeal,
-                            letterSpacing: 3)),
+                    const Text(
+                      'SM ACADEMY',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: kTeal,
+                        letterSpacing: 3,
+                      ),
+                    ),
                     const SizedBox(height: 16),
-                    const Text('Create Account',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: kSlate900)),
+                    const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: kSlate900,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    const Text('Join our medical learning community',
-                        style: TextStyle(fontSize: 14, color: kSlate500)),
+                    const Text(
+                      'Join our medical learning community',
+                      style: TextStyle(fontSize: 14, color: kSlate500),
+                    ),
                     const SizedBox(height: 28),
-
                     if (_error.isNotEmpty) ...[
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -818,50 +812,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           border: Border.all(color: const Color(0xFFFFCDD2)),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(_error,
-<<<<<<< HEAD
-                            style: const TextStyle(color: kRed, fontSize: 13)),
-=======
-                            style:
-                                const TextStyle(color: kRed, fontSize: 13)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+                        child: Text(
+                          _error,
+                          style: const TextStyle(color: kRed, fontSize: 13),
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
-
                     _buildTextField(
-                        controller: _nameCtrl,
-                        label: 'Full Name',
-                        hint: 'John Doe',
-                        icon: Icons.person_outline_rounded),
+                      controller: _nameCtrl,
+                      label: 'Full Name',
+                      hint: 'John Doe',
+                      icon: Icons.person_outline_rounded,
+                    ),
                     const SizedBox(height: 14),
                     _buildTextField(
-                        controller: _emailCtrl,
-                        label: 'Email Address',
-                        hint: 'john@med.edu',
-                        icon: Icons.mail_outline_rounded,
-                        keyboardType: TextInputType.emailAddress),
+                      controller: _emailCtrl,
+                      label: 'Email Address',
+                      hint: 'john@med.edu',
+                      icon: Icons.mail_outline_rounded,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
                     const SizedBox(height: 14),
                     _buildTextField(
-                        controller: _passCtrl,
-                        label: 'Password',
-                        hint: '••••••••',
-                        icon: Icons.lock_outline_rounded,
-                        obscure: true),
+                      controller: _passCtrl,
+                      label: 'Password',
+                      hint: '••••••••',
+                      icon: Icons.lock_outline_rounded,
+                      obscure: true,
+                    ),
                     const SizedBox(height: 14),
-
-                    // Department dropdown
                     _fetchingDepts
                         ? const Center(
                             child: Padding(
-                            padding: EdgeInsets.all(12),
-<<<<<<< HEAD
-                            child: CircularProgressIndicator(color: kTeal),
-=======
-                            child:
-                                CircularProgressIndicator(color: kTeal),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                          ))
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(color: kTeal),
+                            ),
+                          )
                         : _dropdown(
                             label: 'Department',
                             icon: Icons.business_outlined,
@@ -869,7 +856,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             hint: 'Select Department',
                             items: _departments
                                 .map((d) => DropdownMenuItem(
-                                    value: d.id, child: Text(d.name)))
+                                      value: d.id,
+                                      child: Text(d.name),
+                                    ))
                                 .toList(),
                             onChanged: (val) {
                               setState(() {
@@ -881,19 +870,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                     const SizedBox(height: 14),
-
-                    // Stage dropdown
                     _fetchingStages
                         ? const Center(
                             child: Padding(
-                            padding: EdgeInsets.all(12),
-<<<<<<< HEAD
-                            child: CircularProgressIndicator(color: kTeal),
-=======
-                            child:
-                                CircularProgressIndicator(color: kTeal),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                          ))
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(color: kTeal),
+                            ),
+                          )
                         : _dropdown(
                             label: 'Academic Stage',
                             icon: Icons.school_outlined,
@@ -904,48 +887,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             enabled: _selectedDeptId != null,
                             items: _stages
                                 .map((s) => DropdownMenuItem(
-                                    value: s.id, child: Text(s.name)))
+                                      value: s.id,
+                                      child: Text(s.name),
+                                    ))
                                 .toList(),
                             onChanged: (val) =>
                                 setState(() => _selectedStageId = val),
                           ),
-
                     const SizedBox(height: 24),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-<<<<<<< HEAD
                         onPressed:
                             (_loading || _fetchingDepts) ? null : _register,
-=======
-                        onPressed: (_loading || _fetchingDepts) ? null : _register,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kEmerald,
                           foregroundColor: kWhite,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         child: _loading
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: kWhite))
-                            : const Text('Complete Registration',
+                                  strokeWidth: 2,
+                                  color: kWhite,
+                                ),
+                              )
+                            : const Text(
+                                'Complete Registration',
                                 style: TextStyle(
-<<<<<<< HEAD
-                                    fontSize: 16, fontWeight: FontWeight.w800)),
-=======
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -953,10 +934,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: TextStyle(color: kSlate500)),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: const Text('Sign In',
-                              style: TextStyle(
-                                  color: kEmerald,
-                                  fontWeight: FontWeight.w800)),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              color: kEmerald,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -972,7 +956,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 // ===========================================================================
-// MAIN SHELL (Bottom Nav)
+// MAIN SHELL
 // ===========================================================================
 class MainShell extends StatefulWidget {
   final AuthState authState;
@@ -984,7 +968,6 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _tab = 0;
-
   late final List<Widget> _pages;
 
   @override
@@ -1017,30 +1000,29 @@ class _MainShellState extends State<MainShell> {
             unselectedItemColor: kSlate400,
             backgroundColor: kWhite,
             elevation: 0,
-<<<<<<< HEAD
             selectedLabelStyle:
                 const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-=======
-            selectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w700, fontSize: 11),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
             items: const [
               BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home_rounded),
-                  label: 'Home'),
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.book_outlined),
-                  activeIcon: Icon(Icons.book_rounded),
-                  label: 'Subjects'),
+                icon: Icon(Icons.book_outlined),
+                activeIcon: Icon(Icons.book_rounded),
+                label: 'Subjects',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.bookmark_border_rounded),
-                  activeIcon: Icon(Icons.bookmark_rounded),
-                  label: 'Bookmarks'),
+                icon: Icon(Icons.bookmark_border_rounded),
+                activeIcon: Icon(Icons.bookmark_rounded),
+                label: 'Bookmarks',
+              ),
               BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline_rounded),
-                  activeIcon: Icon(Icons.person_rounded),
-                  label: 'Profile'),
+                icon: Icon(Icons.person_outline_rounded),
+                activeIcon: Icon(Icons.person_rounded),
+                label: 'Profile',
+              ),
             ],
           ),
         ),
@@ -1050,8 +1032,9 @@ class _MainShellState extends State<MainShell> {
 }
 
 // ===========================================================================
-// HOME PAGE
+// PAGES
 // ===========================================================================
+
 class HomePage extends StatelessWidget {
   final AuthState authState;
   const HomePage({super.key, required this.authState});
@@ -1075,18 +1058,20 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Text('Welcome, ${profile.name}',
-                style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: kSlate900)),
+            Text(
+              'Welcome, ${profile.name}',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: kSlate900,
+              ),
+            ),
             const SizedBox(height: 4),
-            const Text('Track your progress and keep learning.',
-                style: TextStyle(color: kSlate500, fontSize: 14)),
+            const Text(
+              'Track your progress and keep learning.',
+              style: TextStyle(color: kSlate500, fontSize: 14),
+            ),
             const SizedBox(height: 24),
-
-            // Progress Card
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -1095,9 +1080,10 @@ class HomePage extends StatelessWidget {
                 border: Border.all(color: kSlate100),
                 boxShadow: [
                   BoxShadow(
-                      color: kSlate200.withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                    color: kSlate200.withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: Column(
@@ -1110,19 +1096,24 @@ class HomePage extends StatelessWidget {
                           color: const Color(0xFFCCFBF1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.trending_up_rounded,
-                            color: kTeal, size: 20),
+                        child: const Icon(
+                          Icons.trending_up_rounded,
+                          color: kTeal,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Text('Overall Progress',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: kSlate900)),
+                      const Text(
+                        'Overall Progress',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: kSlate900,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // Progress circle
                   SizedBox(
                     height: 160,
                     child: Stack(
@@ -1145,17 +1136,23 @@ class HomePage extends StatelessWidget {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('$pct%',
-                                style: const TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    color: kSlate900)),
-                            const Text('Completed',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: kSlate400,
-                                    letterSpacing: 1)),
+                            Text(
+                              '$pct%',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: kSlate900,
+                              ),
+                            ),
+                            const Text(
+                              'Completed',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: kSlate400,
+                                letterSpacing: 1,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1164,13 +1161,8 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     "You've completed $displayUsed out of $displayTotal questions. Keep going to master your curriculum!",
-<<<<<<< HEAD
                     style: const TextStyle(
                         color: kSlate500, fontSize: 13, height: 1.5),
-=======
-                    style:
-                        const TextStyle(color: kSlate500, fontSize: 13, height: 1.5),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -1186,55 +1178,48 @@ class HomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Stats cards
-<<<<<<< HEAD
-            _statCard(Icons.menu_book_rounded, 'Total Questions', displayTotal,
-=======
             _statCard(
-                Icons.menu_book_rounded, 'Total Questions', displayTotal,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                'Available in your curriculum',
-                color: const Color(0xFFEFF6FF),
-                iconColor: const Color(0xFF2563EB)),
-            const SizedBox(height: 12),
-<<<<<<< HEAD
-            _statCard(Icons.check_circle_outline_rounded, 'Used Questions',
-                displayUsed, 'Questions you have attempted',
-                color: const Color(0xFFCCFBF1), iconColor: kTeal),
-            const SizedBox(height: 12),
-            _statCard(Icons.circle_outlined, 'Unused Questions', displayUnused,
-                'Remaining practice material',
-                color: kSlate50, iconColor: kSlate500),
-=======
-            _statCard(
-                Icons.check_circle_outline_rounded, 'Used Questions', displayUsed,
-                'Questions you have attempted',
-                color: const Color(0xFFCCFBF1),
-                iconColor: kTeal),
+              Icons.menu_book_rounded,
+              'Total Questions',
+              displayTotal,
+              'Available in your curriculum',
+              color: const Color(0xFFEFF6FF),
+              iconColor: const Color(0xFF2563EB),
+            ),
             const SizedBox(height: 12),
             _statCard(
-                Icons.circle_outlined, 'Unused Questions', displayUnused,
-                'Remaining practice material',
-                color: kSlate50,
-                iconColor: kSlate500),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-
+              Icons.check_circle_outline_rounded,
+              'Used Questions',
+              displayUsed,
+              'Questions you have attempted',
+              color: const Color(0xFFCCFBF1),
+              iconColor: kTeal,
+            ),
+            const SizedBox(height: 12),
+            _statCard(
+              Icons.circle_outlined,
+              'Unused Questions',
+              displayUnused,
+              'Remaining practice material',
+              color: kSlate50,
+              iconColor: kSlate500,
+            ),
             const SizedBox(height: 28),
-
-            // Recent activity
-            const Text('Recent Activity',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: kSlate900)),
+            const Text(
+              'Recent Activity',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: kSlate900,
+              ),
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
                 color: kWhite,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: kSlate200, style: BorderStyle.solid),
+                border: Border.all(color: kSlate200),
               ),
               child: const Center(
                 child: Text(
@@ -1254,19 +1239,19 @@ class HomePage extends StatelessWidget {
     return Row(
       children: [
         Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 6),
-        Text(label,
-            style: const TextStyle(
-<<<<<<< HEAD
-                fontSize: 12, fontWeight: FontWeight.w700, color: kSlate600)),
-=======
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: kSlate600)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: kSlate600,
+          ),
+        ),
       ],
     );
   }
@@ -1281,9 +1266,10 @@ class HomePage extends StatelessWidget {
         border: Border.all(color: kSlate100),
         boxShadow: [
           BoxShadow(
-              color: kSlate200.withOpacity(0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
+            color: kSlate200.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
@@ -1301,25 +1287,26 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label.toUpperCase(),
-                    style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: kSlate400,
-                        letterSpacing: 0.5)),
-                Text('$value',
-                    style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: kSlate900,
-                        height: 1.2)),
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: kSlate400,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  '$value',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: kSlate900,
+                    height: 1.2,
+                  ),
+                ),
                 Text(desc,
-<<<<<<< HEAD
                     style: const TextStyle(fontSize: 11, color: kSlate400)),
-=======
-                    style:
-                        const TextStyle(fontSize: 11, color: kSlate400)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
               ],
             ),
           ),
@@ -1329,11 +1316,6 @@ class HomePage extends StatelessWidget {
   }
 }
 
-const kSlate600 = Color(0xFF475569);
-
-// ===========================================================================
-// CATEGORIES (Subjects) PAGE
-// ===========================================================================
 class CategoriesPage extends StatefulWidget {
   final AuthState authState;
   const CategoriesPage({super.key, required this.authState});
@@ -1361,53 +1343,40 @@ class _CategoriesPageState extends State<CategoriesPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            const Text('Subjects',
-                style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: kSlate900)),
+            const Text(
+              'Subjects',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: kSlate900,
+              ),
+            ),
             const SizedBox(height: 4),
-            const Text('Select a subject to view lectures.',
-                style: TextStyle(color: kSlate500, fontSize: 14)),
+            const Text(
+              'Select a subject to view lectures.',
+              style: TextStyle(color: kSlate500, fontSize: 14),
+            ),
             const SizedBox(height: 16),
-
-            // Search bar
             TextField(
               onChanged: (v) => setState(() => _search = v),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Search subjects...',
-<<<<<<< HEAD
-                prefixIcon: const Icon(Icons.search_rounded, color: kSlate400),
-=======
-                prefixIcon:
-                    const Icon(Icons.search_rounded, color: kSlate400),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                hintStyle: const TextStyle(color: kSlate400),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                prefixIcon: Icon(Icons.search_rounded, color: kSlate400),
+                hintStyle: TextStyle(color: kSlate400),
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
               ),
             ),
             const SizedBox(height: 20),
-
-            // List
             Expanded(
               child: subjects.isEmpty
-<<<<<<< HEAD
                   ? _emptyState(
                       'No subjects assigned yet.\nPlease contact the Admin.')
-=======
-                  ? _emptyState('No subjects assigned yet.\nPlease contact the Admin.')
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                   : filtered.isEmpty
                       ? _emptyState('No matching subjects found.')
                       : ListView.separated(
                           itemCount: filtered.length,
-<<<<<<< HEAD
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
-=======
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                           itemBuilder: (context, i) {
                             final s = filtered[i];
                             return _SubjectCard(
@@ -1443,23 +1412,18 @@ class _CategoriesPageState extends State<CategoriesPage> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-<<<<<<< HEAD
               decoration:
-                  BoxDecoration(color: kSlate50, shape: BoxShape.circle),
+                  const BoxDecoration(color: kSlate50, shape: BoxShape.circle),
               child:
                   const Icon(Icons.book_outlined, size: 36, color: kSlate400),
-=======
-              decoration: BoxDecoration(
-                  color: kSlate50, shape: BoxShape.circle),
-              child: const Icon(Icons.book_outlined,
-                  size: 36, color: kSlate400),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
             ),
             const SizedBox(height: 16),
-            Text(msg,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: kSlate500, fontSize: 14, height: 1.5)),
+            Text(
+              msg,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(color: kSlate500, fontSize: 14, height: 1.5),
+            ),
           ],
         ),
       ),
@@ -1484,9 +1448,10 @@ class _SubjectCard extends StatelessWidget {
           border: Border.all(color: kSlate100),
           boxShadow: [
             BoxShadow(
-                color: kSlate200.withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
+              color: kSlate200.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Row(
@@ -1505,26 +1470,27 @@ class _SubjectCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(subject.subjectName,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: kSlate900)),
-                  const Text('Medical Subject',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: kSlate400,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5)),
+                  Text(
+                    subject.subjectName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: kSlate900,
+                    ),
+                  ),
+                  const Text(
+                    'Medical Subject',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: kSlate400,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ],
               ),
             ),
-<<<<<<< HEAD
             const Icon(Icons.chevron_right_rounded, color: kSlate400),
-=======
-            const Icon(Icons.chevron_right_rounded,
-                color: kSlate400),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
           ],
         ),
       ),
@@ -1532,9 +1498,6 @@ class _SubjectCard extends StatelessWidget {
   }
 }
 
-// ===========================================================================
-// LECTURES PAGE
-// ===========================================================================
 class LecturesPage extends StatefulWidget {
   final String subjectId;
   final String departmentId;
@@ -1611,13 +1574,10 @@ class _LecturesPageState extends State<LecturesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.subjectName,
-<<<<<<< HEAD
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-=======
-            style: const TextStyle(
-                fontWeight: FontWeight.w800, fontSize: 18)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+        title: Text(
+          widget.subjectName,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
@@ -1634,13 +1594,8 @@ class _LecturesPageState extends State<LecturesPage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(20),
-<<<<<<< HEAD
                           decoration: const BoxDecoration(
                               color: kSlate50, shape: BoxShape.circle),
-=======
-                          decoration:
-                              const BoxDecoration(color: kSlate50, shape: BoxShape.circle),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                           child: const Icon(Icons.book_outlined,
                               size: 36, color: kSlate400),
                         ),
@@ -1682,9 +1637,10 @@ class _LecturesPageState extends State<LecturesPage> {
                           border: Border.all(color: kSlate100),
                           boxShadow: [
                             BoxShadow(
-                                color: kSlate200.withOpacity(0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2))
+                              color: kSlate200.withOpacity(0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
                         child: Row(
@@ -1696,29 +1652,31 @@ class _LecturesPageState extends State<LecturesPage> {
                                 color: const Color(0xFFCCFBF1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-<<<<<<< HEAD
                               child: const Icon(
-                                  Icons.play_circle_outline_rounded,
-                                  color: kTeal,
-                                  size: 24),
-=======
-                              child: const Icon(Icons.play_circle_outline_rounded,
-                                  color: kTeal, size: 24),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+                                Icons.play_circle_outline_rounded,
+                                color: kTeal,
+                                size: 24,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
-                              child: Text(lec.name,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: kSlate900)),
+                              child: Text(
+                                lec.name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: kSlate900,
+                                ),
+                              ),
                             ),
-                            const Text('Start Quiz',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: kSlate400,
-                                    fontWeight: FontWeight.w700)),
+                            const Text(
+                              'Start Quiz',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: kSlate400,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             const SizedBox(width: 6),
                             const Icon(Icons.chevron_right_rounded,
                                 color: kSlate400),
@@ -1733,16 +1691,18 @@ class _LecturesPageState extends State<LecturesPage> {
 }
 
 // ===========================================================================
-// QUIZ PAGE
+// QUIZ PAGE & LOGIC
 // ===========================================================================
+
 class _QuestionProgress {
   final String? selectedOptionId;
   final bool isCorrect;
   final bool isAnswered;
-  _QuestionProgress(
-      {this.selectedOptionId,
-      required this.isCorrect,
-      required this.isAnswered});
+  _QuestionProgress({
+    this.selectedOptionId,
+    required this.isCorrect,
+    required this.isAnswered,
+  });
 }
 
 class QuizPage extends StatefulWidget {
@@ -1788,7 +1748,6 @@ class _QuizPageState extends State<QuizPage> {
     final profile = widget.authState.profile;
     if (profile == null) return;
     try {
-      // Fetch questions
       final questionsPath = FirebaseFirestore.instance
           .collection('departments')
           .doc(widget.departmentId)
@@ -1805,7 +1764,6 @@ class _QuizPageState extends State<QuizPage> {
           snap.docs.map((d) => Question.fromMap(d.id, d.data())).toList();
       setState(() => _questions = questions);
 
-      // Fetch user progress
       final progressSnap = await FirebaseFirestore.instance
           .collection('users')
           .doc(profile.uid)
@@ -1820,7 +1778,6 @@ class _QuizPageState extends State<QuizPage> {
         );
       }
 
-      // Fetch bookmarks
       final bSnap = await FirebaseFirestore.instance
           .collection('bookmarks')
           .where('userId', isEqualTo: profile.uid)
@@ -1836,7 +1793,7 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   Future<void> _saveProgress(
-      String questionId, String optionId, bool isCorrect) async {
+      String questionId, String? optionId, bool isCorrect) async {
     final profile = widget.authState.profile;
     if (profile == null) return;
     try {
@@ -1861,14 +1818,8 @@ class _QuizPageState extends State<QuizPage> {
         );
       });
 
-<<<<<<< HEAD
       final userRef =
           FirebaseFirestore.instance.collection('users').doc(profile.uid);
-=======
-      final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(profile.uid);
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
       final currentUnused = profile.stats.unusedQuestions;
       final Map<String, dynamic> updates = {
         'stats.usedQuestions': FieldValue.increment(1),
@@ -1932,7 +1883,7 @@ class _QuizPageState extends State<QuizPage> {
     final q = _questions[_currentIndex];
     for (final opt in q.options) {
       if (opt.isCorrect) {
-        _saveProgress(q.id, '', true);
+        _saveProgress(q.id, null, true);
         setState(() {
           _expandedExplanations.clear();
           _expandedExplanations.add(opt.id);
@@ -1964,7 +1915,6 @@ class _QuizPageState extends State<QuizPage> {
         body: const Center(child: CircularProgressIndicator(color: kTeal)),
       );
     }
-
     if (_questions.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.lectureName)),
@@ -1986,16 +1936,13 @@ class _QuizPageState extends State<QuizPage> {
           children: [
             Column(
               children: [
-                // Header
                 _quizHeader(currentQ, isAnswered, qProgress),
-                // Main Content
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Question label + status
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -2009,10 +1956,11 @@ class _QuizPageState extends State<QuizPage> {
                               child: Text(
                                 'Question ${_currentIndex + 1}',
                                 style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: kSlate500,
-                                    letterSpacing: 0.8),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: kSlate500,
+                                  letterSpacing: 0.8,
+                                ),
                               ),
                             ),
                             if (isAnswered)
@@ -2033,14 +1981,8 @@ class _QuizPageState extends State<QuizPage> {
                                           ? Icons.check_circle_outline
                                           : Icons.error_outline,
                                       size: 12,
-<<<<<<< HEAD
                                       color:
                                           qProgress.isCorrect ? kEmerald : kRed,
-=======
-                                      color: qProgress.isCorrect
-                                          ? kEmerald
-                                          : kRed,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -2048,12 +1990,13 @@ class _QuizPageState extends State<QuizPage> {
                                           ? 'Correct'
                                           : 'Incorrect',
                                       style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w900,
-                                          color: qProgress.isCorrect
-                                              ? kEmerald
-                                              : kRed,
-                                          letterSpacing: 0.5),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: qProgress.isCorrect
+                                            ? kEmerald
+                                            : kRed,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -2061,36 +2004,25 @@ class _QuizPageState extends State<QuizPage> {
                           ],
                         ),
                         const SizedBox(height: 16),
-
-                        // Question text
                         Text(
-                          currentQ.text.isEmpty
-                              ? 'Question text not found'
-                              : currentQ.text,
+                          currentQ.text,
                           style: TextStyle(
-                              fontSize: _textSize,
-                              fontWeight: FontWeight.w700,
-                              color: kSlate900,
-                              height: 1.4),
+                            fontSize: _textSize,
+                            fontWeight: FontWeight.w700,
+                            color: kSlate900,
+                            height: 1.4,
+                          ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Options
                         ...currentQ.options.asMap().entries.map((entry) {
-                          final idx = entry.key;
-                          final opt = entry.value;
                           return _buildOptionCard(
-                              opt, idx, isAnswered, qProgress);
+                              entry.value, entry.key, isAnswered, qProgress);
                         }),
-
                         const SizedBox(height: 24),
-
-                        // Action buttons
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-<<<<<<< HEAD
                                 onPressed:
                                     isAnswered ? _resetQuestion : _showAnswer,
                                 style: OutlinedButton.styleFrom(
@@ -2099,37 +2031,25 @@ class _QuizPageState extends State<QuizPage> {
                                   side: const BorderSide(color: kSlate200),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16)),
-=======
-                                onPressed: isAnswered
-                                    ? _resetQuestion
-                                    : _showAnswer,
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
-                                  side:
-                                      const BorderSide(color: kSlate200),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(16)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                                 ),
                                 icon: Icon(
-                                    isAnswered
-                                        ? Icons.refresh_rounded
-                                        : Icons.visibility_outlined,
-                                    size: 18,
-                                    color: kSlate600),
+                                  isAnswered
+                                      ? Icons.refresh_rounded
+                                      : Icons.visibility_outlined,
+                                  size: 18,
+                                  color: kSlate600,
+                                ),
                                 label: Text(
-                                    isAnswered ? 'Reset' : 'Show Answer',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        color: kSlate600)),
+                                  isAnswered ? 'Reset' : 'Show Answer',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: kSlate600),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton(
-<<<<<<< HEAD
                                 onPressed: _currentIndex < _questions.length - 1
                                     ? () => setState(() {
                                           _currentIndex++;
@@ -2143,31 +2063,14 @@ class _QuizPageState extends State<QuizPage> {
                                       const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16)),
-=======
-                                onPressed:
-                                    _currentIndex < _questions.length - 1
-                                        ? () => setState(() {
-                                              _currentIndex++;
-                                              _expandedExplanations
-                                                  .clear();
-                                            })
-                                        : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: kSlate900,
-                                  foregroundColor: kWhite,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(16)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                                 ),
                                 child: Text(
-                                    _currentIndex == _questions.length - 1
-                                        ? 'Last Question'
-                                        : 'Next Question',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w800)),
+                                  _currentIndex == _questions.length - 1
+                                      ? 'Last Question'
+                                      : 'Next Question',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w800),
+                                ),
                               ),
                             ),
                           ],
@@ -2177,16 +2080,10 @@ class _QuizPageState extends State<QuizPage> {
                     ),
                   ),
                 ),
-
-                // Footer nav
                 _quizFooter(),
               ],
             ),
-
-            // Sidebar overlay
             if (_showSidebar) _buildSidebar(),
-
-            // Summary modal
             if (_showSummary) _buildSummaryModal(),
           ],
         ),
@@ -2194,12 +2091,7 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
-<<<<<<< HEAD
   Widget _quizHeader(Question q, bool isAnswered, _QuestionProgress? qp) {
-=======
-  Widget _quizHeader(
-      Question q, bool isAnswered, _QuestionProgress? qp) {
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -2233,23 +2125,17 @@ class _QuizPageState extends State<QuizPage> {
               ],
             ),
           ),
-          // Text size
           IconButton(
             icon: const Icon(Icons.text_fields_rounded,
                 color: kSlate500, size: 20),
             onPressed: () => setState(() {
-<<<<<<< HEAD
               _textSize = _textSize == 18
                   ? 22
                   : _textSize == 22
                       ? 15
                       : 18;
-=======
-              _textSize = _textSize == 18 ? 22 : _textSize == 22 ? 15 : 18;
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
             }),
           ),
-          // Bookmark
           IconButton(
             icon: Icon(
               _flagged[q.id] == true
@@ -2259,15 +2145,9 @@ class _QuizPageState extends State<QuizPage> {
             ),
             onPressed: () => _toggleBookmark(q.id),
           ),
-          // Sidebar toggle
           IconButton(
-<<<<<<< HEAD
             icon:
                 const Icon(Icons.grid_view_rounded, color: kSlate500, size: 20),
-=======
-            icon: const Icon(Icons.grid_view_rounded,
-                color: kSlate500, size: 20),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
             onPressed: () => setState(() => _showSidebar = true),
           ),
         ],
@@ -2275,13 +2155,8 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
-<<<<<<< HEAD
   Widget _buildOptionCard(
       QuizOption opt, int idx, bool isAnswered, _QuestionProgress? qp) {
-=======
-  Widget _buildOptionCard(QuizOption opt, int idx, bool isAnswered,
-      _QuestionProgress? qp) {
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
     final isSelected = qp?.selectedOptionId == opt.id;
     final isExpanded = _expandedExplanations.contains(opt.id);
 
@@ -2362,18 +2237,12 @@ class _QuizPageState extends State<QuizPage> {
                 if (isAnswered && isSelected && !opt.isCorrect)
                   const Padding(
                     padding: EdgeInsets.only(top: 6),
-<<<<<<< HEAD
                     child: Icon(Icons.cancel_rounded, color: kRed, size: 22),
-=======
-                    child:
-                        Icon(Icons.cancel_rounded, color: kRed, size: 22),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                   ),
               ],
             ),
           ),
         ),
-        // Explanation
         AnimatedSize(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
@@ -2469,13 +2338,7 @@ class _QuizPageState extends State<QuizPage> {
               icon: const Text('Next',
                   style: TextStyle(fontWeight: FontWeight.w800)),
               label: const Icon(Icons.chevron_right_rounded),
-              style: TextButton.styleFrom(
-<<<<<<< HEAD
-                  foregroundColor: kTeal, iconColor: kTeal),
-=======
-                  foregroundColor: kTeal,
-                  iconColor: kTeal),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+              style: TextButton.styleFrom(foregroundColor: kTeal),
             ),
           ),
         ],
@@ -2491,7 +2354,7 @@ class _QuizPageState extends State<QuizPage> {
         child: Align(
           alignment: Alignment.centerRight,
           child: GestureDetector(
-            onTap: () {}, // prevent dismiss on sidebar tap
+            onTap: () {},
             child: Container(
               width: 300,
               height: double.infinity,
@@ -2515,17 +2378,11 @@ class _QuizPageState extends State<QuizPage> {
                         IconButton(
                           icon:
                               const Icon(Icons.close_rounded, color: kSlate400),
-<<<<<<< HEAD
                           onPressed: () => setState(() => _showSidebar = false),
-=======
-                          onPressed: () =>
-                              setState(() => _showSidebar = false),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Progress
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2551,12 +2408,7 @@ class _QuizPageState extends State<QuizPage> {
                             : _answeredCount / _questions.length,
                         minHeight: 8,
                         backgroundColor: kSlate200,
-<<<<<<< HEAD
                         valueColor: const AlwaysStoppedAnimation<Color>(kTeal),
-=======
-                        valueColor:
-                            const AlwaysStoppedAnimation<Color>(kTeal),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -2567,29 +2419,19 @@ class _QuizPageState extends State<QuizPage> {
                           crossAxisCount: 5,
                           crossAxisSpacing: 8,
                           mainAxisSpacing: 8,
-                          childAspectRatio: 1,
                         ),
                         itemCount: _questions.length,
                         itemBuilder: (context, i) {
-                          final q = _questions[i];
-                          final qp = _progress[q.id];
+                          final qp = _progress[_questions[i].id];
                           final isActive = i == _currentIndex;
-
                           Color bg = kWhite;
                           Color textColor = kSlate500;
                           Color borderColor = kSlate200;
-
                           if (qp?.isAnswered == true) {
                             bg = qp!.isCorrect ? kEmerald : kRed;
                             textColor = kWhite;
-<<<<<<< HEAD
                             borderColor = qp.isCorrect ? kEmerald : kRed;
-=======
-                            borderColor =
-                                qp.isCorrect ? kEmerald : kRed;
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                           }
-
                           return GestureDetector(
                             onTap: () => setState(() {
                               _currentIndex = i;
@@ -2600,13 +2442,7 @@ class _QuizPageState extends State<QuizPage> {
                               decoration: BoxDecoration(
                                 color: bg,
                                 border: Border.all(
-<<<<<<< HEAD
                                     color: isActive ? kSlate900 : borderColor,
-=======
-                                    color: isActive
-                                        ? kSlate900
-                                        : borderColor,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                                     width: isActive ? 2.5 : 1.5),
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -2671,15 +2507,7 @@ class _QuizPageState extends State<QuizPage> {
               decoration: BoxDecoration(
                 color: kWhite,
                 borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-<<<<<<< HEAD
-                      color: Colors.black.withOpacity(0.2), blurRadius: 40)
-=======
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 40)
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                ],
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 40)],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -2688,9 +2516,8 @@ class _QuizPageState extends State<QuizPage> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCCFBF1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                        color: const Color(0xFFCCFBF1),
+                        borderRadius: BorderRadius.circular(20)),
                     child: const Icon(Icons.emoji_events_rounded,
                         color: kTeal, size: 40),
                   ),
@@ -2710,9 +2537,8 @@ class _QuizPageState extends State<QuizPage> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: kSlate50,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                              color: kSlate50,
+                              borderRadius: BorderRadius.circular(16)),
                           child: Column(
                             children: [
                               const Text('SCORE',
@@ -2721,7 +2547,6 @@ class _QuizPageState extends State<QuizPage> {
                                       fontWeight: FontWeight.w900,
                                       color: kSlate400,
                                       letterSpacing: 1)),
-                              const SizedBox(height: 4),
                               Text('$score%',
                                   style: const TextStyle(
                                       fontSize: 28,
@@ -2736,9 +2561,8 @@ class _QuizPageState extends State<QuizPage> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: kSlate50,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                              color: kSlate50,
+                              borderRadius: BorderRadius.circular(16)),
                           child: Column(
                             children: [
                               const Text('CORRECT',
@@ -2747,7 +2571,6 @@ class _QuizPageState extends State<QuizPage> {
                                       fontWeight: FontWeight.w900,
                                       color: kSlate400,
                                       letterSpacing: 1)),
-                              const SizedBox(height: 4),
                               Text('$_correctCount/${_questions.length}',
                                   style: const TextStyle(
                                       fontSize: 28,
@@ -2776,23 +2599,11 @@ class _QuizPageState extends State<QuizPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-<<<<<<< HEAD
-                      onPressed: () => setState(() => _showSummary = false),
-                      child: const Text('Review Answers',
-                          style: TextStyle(
-                              color: kSlate500, fontWeight: FontWeight.w700)),
-=======
-                      onPressed: () =>
-                          setState(() => _showSummary = false),
-                      child: const Text('Review Answers',
-                          style: TextStyle(
-                              color: kSlate500,
-                              fontWeight: FontWeight.w700)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                    ),
+                  TextButton(
+                    onPressed: () => setState(() => _showSummary = false),
+                    child: const Text('Review Answers',
+                        style: TextStyle(
+                            color: kSlate500, fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
@@ -2804,9 +2615,6 @@ class _QuizPageState extends State<QuizPage> {
   }
 }
 
-// ===========================================================================
-// BOOKMARKS PAGE
-// ===========================================================================
 class BookmarksPage extends StatefulWidget {
   final AuthState authState;
   const BookmarksPage({super.key, required this.authState});
@@ -2830,7 +2638,6 @@ class _BookmarksPageState extends State<BookmarksPage> {
     final profile = widget.authState.profile;
     if (profile == null) return;
     setState(() => _loading = true);
-
     try {
       final snap = await FirebaseFirestore.instance
           .collection('bookmarks')
@@ -2838,61 +2645,24 @@ class _BookmarksPageState extends State<BookmarksPage> {
           .get();
 
       final items = <Map<String, dynamic>>[];
-
       for (final d in snap.docs) {
         final data = d.data();
-        final questionId = data['questionId'] as String? ?? '';
-        Question? q;
-
-        try {
-          if (data['questionPath'] != null) {
-            final qSnap = await FirebaseFirestore.instance
-                .doc(data['questionPath'] as String)
-                .get();
-            if (qSnap.exists) {
-              q = Question.fromMap(qSnap.id, qSnap.data()!);
-            }
-          }
-          if (q == null) {
-            final topSnap = await FirebaseFirestore.instance
-                .collection('questions')
-                .doc(questionId)
-                .get();
-            if (topSnap.exists) {
-              q = Question.fromMap(topSnap.id, topSnap.data()!);
-            }
-          }
-        } catch (e) {
-          debugPrint('Error fetching bookmark question: $e');
-        }
-
-        if (q != null) {
-          items.add({'questionId': questionId, 'question': q});
+        final qId = data['questionId'] as String;
+        final qSnap = await FirebaseFirestore.instance
+            .collectionGroup('questions')
+            .where(FieldPath.documentId, isEqualTo: qId)
+            .get();
+        if (qSnap.docs.isNotEmpty) {
+          final q =
+              Question.fromMap(qSnap.docs.first.id, qSnap.docs.first.data());
+          items.add({'questionId': qId, 'question': q});
         }
       }
-
       setState(() => _bookmarkedItems = items);
     } catch (e) {
       debugPrint('Error fetching bookmarks: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _removeBookmark(String questionId) async {
-    final profile = widget.authState.profile;
-    if (profile == null) return;
-    try {
-      await FirebaseFirestore.instance
-          .collection('bookmarks')
-          .doc('${profile.uid}_$questionId')
-          .delete();
-      setState(() {
-        _bookmarkedItems.removeWhere((i) => i['questionId'] == questionId);
-        if (_expandedId == questionId) _expandedId = null;
-      });
-    } catch (e) {
-      debugPrint('Error removing bookmark: $e');
     }
   }
 
@@ -2915,235 +2685,54 @@ class _BookmarksPageState extends State<BookmarksPage> {
             const SizedBox(height: 20),
             Expanded(
               child: _loading
-<<<<<<< HEAD
                   ? const Center(child: CircularProgressIndicator(color: kTeal))
-=======
-                  ? const Center(
-                      child: CircularProgressIndicator(color: kTeal))
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                   : _bookmarkedItems.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: const BoxDecoration(
-                                    color: kSlate50, shape: BoxShape.circle),
-<<<<<<< HEAD
-                                child: const Icon(Icons.bookmark_border_rounded,
-                                    size: 36, color: kSlate400),
-=======
-                                child: const Icon(
-                                    Icons.bookmark_border_rounded,
-                                    size: 36,
-                                    color: kSlate400),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No bookmarks yet.\nSave questions during a quiz to find them here.',
-                                textAlign: TextAlign.center,
-<<<<<<< HEAD
-                                style: TextStyle(
-                                    color: kSlate500,
-                                    fontSize: 14,
-                                    height: 1.5),
-=======
-                                style:
-                                    TextStyle(color: kSlate500, fontSize: 14, height: 1.5),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                              ),
-                            ],
-                          ),
-                        )
+                      ? const Center(child: Text('No bookmarks yet.'))
                       : ListView.separated(
                           itemCount: _bookmarkedItems.length,
-<<<<<<< HEAD
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
-=======
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                           itemBuilder: (context, i) {
-                            final item = _bookmarkedItems[i];
-                            final Question q = item['question'] as Question;
-                            final String qId = item['questionId'] as String;
+                            final q =
+                                _bookmarkedItems[i]['question'] as Question;
+                            final qId =
+                                _bookmarkedItems[i]['questionId'] as String;
                             final isExpanded = _expandedId == qId;
-
                             return Container(
                               decoration: BoxDecoration(
-                                color: kWhite,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: kSlate100),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: kSlate200.withOpacity(0.4),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2))
-                                ],
-                              ),
+                                  color: kWhite,
+                                  borderRadius: BorderRadius.circular(18)),
                               child: Column(
                                 children: [
                                   ListTile(
                                     onTap: () => setState(() =>
                                         _expandedId = isExpanded ? null : qId),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    leading: Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFCCFBF1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-<<<<<<< HEAD
-                                      child: const Icon(Icons.bookmark_rounded,
-                                          color: kTeal, size: 20),
-                                    ),
-                                    title: Text(
-                                      q.text.isEmpty ? 'Question' : q.text,
-=======
-                                      child: const Icon(
-                                          Icons.bookmark_rounded,
-                                          color: kTeal,
-                                          size: 20),
-                                    ),
-                                    title: Text(
-                                      q.text.isEmpty
-                                          ? 'Question'
-                                          : q.text,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                      style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: kSlate900),
-                                      maxLines: isExpanded ? null : 2,
-                                      overflow: isExpanded
-                                          ? null
-                                          : TextOverflow.ellipsis,
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          isExpanded
-                                              ? Icons.keyboard_arrow_up_rounded
-<<<<<<< HEAD
-                                              : Icons
-                                                  .keyboard_arrow_down_rounded,
-=======
-                                              : Icons.keyboard_arrow_down_rounded,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                          color: kSlate400,
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons.delete_outline_rounded,
-                                              color: kRed,
-                                              size: 20),
-<<<<<<< HEAD
-                                          onPressed: () => _removeBookmark(qId),
-=======
-                                          onPressed: () =>
-                                              _removeBookmark(qId),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                        ),
-                                      ],
-                                    ),
+                                    title: Text(q.text,
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700),
+                                        maxLines: isExpanded ? null : 2),
+                                    trailing: Icon(isExpanded
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down),
                                   ),
-                                  if (isExpanded) ...[
-<<<<<<< HEAD
-                                    const Divider(height: 1, color: kSlate100),
-=======
-                                    const Divider(
-                                        height: 1, color: kSlate100),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
+                                  if (isExpanded)
                                     Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-<<<<<<< HEAD
-                                        children:
-                                            q.options.asMap().entries.map((e) {
-                                          final idx = e.key;
-                                          final opt = e.value;
-                                          return Container(
-                                            margin: const EdgeInsets.only(
-                                                bottom: 8),
-=======
-                                        children: q.options.asMap().entries.map((e) {
-                                          final idx = e.key;
-                                          final opt = e.value;
-                                          return Container(
-                                            margin: const EdgeInsets.only(bottom: 8),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: opt.isCorrect
-                                                  ? kEmeraldLight
-                                                  : kSlate50,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: opt.isCorrect
-                                                    ? kEmerald
-                                                    : kSlate100,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Text(
-                                                  String.fromCharCode(65 + idx),
-                                                  style: TextStyle(
-<<<<<<< HEAD
-                                                    fontWeight: FontWeight.w900,
-=======
-                                                    fontWeight:
-                                                        FontWeight.w900,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                                    color: opt.isCorrect
-                                                        ? kEmerald
-                                                        : kSlate500,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Text(opt.text,
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        color: opt.isCorrect
-                                                            ? const Color(
-                                                                0xFF065F46)
-                                                            : kSlate700,
-<<<<<<< HEAD
-                                                        fontWeight: opt
-                                                                .isCorrect
-=======
-                                                        fontWeight: opt.isCorrect
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                                            ? FontWeight.w700
-                                                            : FontWeight.w500,
-                                                      )),
-                                                ),
-                                                if (opt.isCorrect)
-                                                  const Icon(
-<<<<<<< HEAD
-                                                      Icons
-                                                          .check_circle_rounded,
-=======
-                                                      Icons.check_circle_rounded,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                                                      color: kEmerald,
-                                                      size: 18),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
+                                          children: q.options
+                                              .map((o) => ListTile(
+                                                  title: Text(o.text),
+                                                  leading: Icon(
+                                                      o.isCorrect
+                                                          ? Icons.check_circle
+                                                          : Icons
+                                                              .circle_outlined,
+                                                      color: o.isCorrect
+                                                          ? kEmerald
+                                                          : kSlate200)))
+                                              .toList()),
                                     ),
-                                  ],
                                 ],
                               ),
                             );
@@ -3157,9 +2746,6 @@ class _BookmarksPageState extends State<BookmarksPage> {
   }
 }
 
-// ===========================================================================
-// PROFILE PAGE
-// ===========================================================================
 class ProfilePage extends StatelessWidget {
   final AuthState authState;
   const ProfilePage({super.key, required this.authState});
@@ -3175,7 +2761,6 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            // Avatar
             Container(
               width: 88,
               height: 88,
@@ -3190,12 +2775,7 @@ class ProfilePage extends StatelessWidget {
                       offset: const Offset(0, 4))
                 ],
               ),
-<<<<<<< HEAD
               child: const Icon(Icons.person_rounded, color: kTeal, size: 48),
-=======
-              child: const Icon(Icons.person_rounded,
-                  color: kTeal, size: 48),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
             ),
             const SizedBox(height: 12),
             Text(profile.name,
@@ -3206,12 +2786,9 @@ class ProfilePage extends StatelessWidget {
             const Text('Medical Student',
                 style: TextStyle(color: kSlate500, fontSize: 14)),
             const SizedBox(height: 28),
-
-            // Account Settings card
             _sectionCard(
               title: 'Account Settings',
               children: [
-<<<<<<< HEAD
                 _profileRow(Icons.person_outline_rounded,
                     'Personal Information', profile.name),
                 _divider(),
@@ -3221,36 +2798,15 @@ class ProfilePage extends StatelessWidget {
                 _profileRow(
                     Icons.business_outlined,
                     'Department',
-=======
-                _profileRow(
-                    Icons.person_outline_rounded, 'Personal Information',
-                    profile.name),
-                _divider(),
-                _profileRow(
-                    Icons.mail_outline_rounded, 'Email Address',
-                    profile.email),
-                _divider(),
-                _profileRow(Icons.business_outlined, 'Department',
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
                     profile.departmentName.isNotEmpty
                         ? profile.departmentName
-                        : 'Not Assigned'),
+                        : 'N/A'),
                 _divider(),
-<<<<<<< HEAD
-                _profileRow(
-                    Icons.school_outlined,
-                    'Academic Stage',
-=======
                 _profileRow(Icons.school_outlined, 'Academic Stage',
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-                    profile.stageName.isNotEmpty
-                        ? profile.stageName
-                        : 'Not Assigned'),
+                    profile.stageName.isNotEmpty ? profile.stageName : 'N/A'),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Preferences card
             _sectionCard(
               title: 'Preferences',
               children: [
@@ -3259,28 +2815,14 @@ class ProfilePage extends StatelessWidget {
                 _divider(),
                 _preferenceRow(Icons.dark_mode_outlined, 'Dark Mode', false),
                 _divider(),
-<<<<<<< HEAD
                 _chevronRow(Icons.shield_outlined, 'Privacy & Security'),
-                _divider(),
-                _chevronRow(Icons.settings_outlined, 'App Settings'),
-=======
-                _chevronRow(
-                    Icons.shield_outlined, 'Privacy & Security'),
-                _divider(),
-                _chevronRow(
-                    Icons.settings_outlined, 'App Settings'),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
               ],
             ),
             const SizedBox(height: 20),
-
-            // Logout
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                },
+                onPressed: () => FirebaseAuth.instance.signOut(),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFFFFCDD2)),
                   foregroundColor: kRed,
@@ -3290,63 +2832,33 @@ class ProfilePage extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Sign Out',
-<<<<<<< HEAD
                     style:
                         TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-=======
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800)),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
               ),
             ),
-            const SizedBox(height: 24),
-            const Text('SM ACADEMY v1.0.0',
-                style: TextStyle(
-                    fontSize: 11,
-                    color: kSlate400,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5)),
-            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-<<<<<<< HEAD
   Widget _sectionCard({required String title, required List<Widget> children}) {
-=======
-  Widget _sectionCard(
-      {required String title, required List<Widget> children}) {
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
     return Container(
       decoration: BoxDecoration(
         color: kWhite,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: kSlate100),
-        boxShadow: [
-          BoxShadow(
-              color: kSlate200.withOpacity(0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-<<<<<<< HEAD
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-=======
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
             child: Text(title.toUpperCase(),
                 style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    color: kSlate400,
-                    letterSpacing: 1.5)),
+                    color: kSlate400)),
           ),
           const Divider(height: 1, color: kSlate100),
           ...children,
@@ -3360,33 +2872,17 @@ class ProfilePage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: kSlate100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 18, color: kSlate500),
-          ),
+          Icon(icon, size: 18, color: kSlate500),
           const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label.toUpperCase(),
-                    style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: kSlate400,
-                        letterSpacing: 0.5)),
-                const SizedBox(height: 2),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: kSlate700)),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(fontSize: 10, color: kSlate400)),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w700)),
+            ],
           ),
         ],
       ),
@@ -3394,91 +2890,20 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _preferenceRow(IconData icon, String label, bool enabled) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: kSlate100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 18, color: kSlate500),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label.toUpperCase(),
-                    style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: kSlate400,
-                        letterSpacing: 0.5)),
-                Text(enabled ? 'Enabled' : 'Disabled',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: kSlate700)),
-              ],
-            ),
-          ),
-          Container(
-            width: 42,
-            height: 24,
-            decoration: BoxDecoration(
-              color: enabled ? kTeal : kSlate200,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Align(
-<<<<<<< HEAD
-              alignment: enabled ? Alignment.centerRight : Alignment.centerLeft,
-=======
-              alignment:
-                  enabled ? Alignment.centerRight : Alignment.centerLeft,
->>>>>>> ae9616f6ece87e744e55b297a16bf9f173f5a23f
-              child: Container(
-                width: 18,
-                height: 18,
-                margin: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  color: kWhite,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return ListTile(
+      leading: Icon(icon, size: 18, color: kSlate500),
+      title: Text(label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+      trailing: Switch(value: enabled, onChanged: (_) {}, activeColor: kTeal),
     );
   }
 
   Widget _chevronRow(IconData icon, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: kSlate100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 18, color: kSlate500),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: kSlate700)),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: kSlate400),
-        ],
-      ),
+    return ListTile(
+      leading: Icon(icon, size: 18, color: kSlate500),
+      title: Text(label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+      trailing: const Icon(Icons.chevron_right, color: kSlate400),
     );
   }
 
