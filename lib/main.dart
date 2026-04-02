@@ -67,9 +67,8 @@ class UserProfile {
       departmentName: data['departmentName'] ?? '',
       stageId: data['stageId'] ?? '',
       stageName: data['stageName'] ?? '',
-      assignedSubjects: rawSubjects
-          .map((s) => AssignedSubject.fromMap(s as Map<String, dynamic>))
-          .toList(),
+      assignedSubjects:
+          rawSubjects.map((s) => AssignedSubject.fromMap(s as Map<String, dynamic>)).toList(),
       stats: UserStats.fromMap(data['stats'] as Map<String, dynamic>? ?? {}),
     );
   }
@@ -168,14 +167,9 @@ class Question {
     final rawOpts = data['options'] as List<dynamic>? ?? [];
     return Question(
       id: id,
-      text: data['questionText'] ??
-          data['text'] ??
-          data['title'] ??
-          data['question'] ??
-          '',
-      options: rawOpts
-          .map((o) => QuizOption.fromMap(o as Map<String, dynamic>))
-          .toList(),
+      text: data['questionText'] ?? data['text'] ?? data['title'] ?? data['question'] ?? '',
+      options:
+          rawOpts.map((o) => QuizOption.fromMap(o as Map<String, dynamic>)).toList(),
     );
   }
 }
@@ -184,66 +178,45 @@ class BookmarkedQuestion {
   final String questionId;
   final Question question;
   final String? questionPath;
-  BookmarkedQuestion(
-      {required this.questionId, required this.question, this.questionPath});
+  BookmarkedQuestion({required this.questionId, required this.question, this.questionPath});
 }
 
 // ===========================================================================
-// AUTH STATE
+// AUTH STATE (simple InheritedNotifier approach)
 // ===========================================================================
 
 class AuthState extends ChangeNotifier {
   User? _user;
   UserProfile? _profile;
   bool _loading = true;
-  String? _error;
   StreamSubscription? _authSub;
   StreamSubscription? _profileSub;
 
   User? get user => _user;
   UserProfile? get profile => _profile;
   bool get loading => _loading;
-  String? get error => _error;
 
   AuthState() {
-    _init();
-  }
-
-  void _init() {
-    try {
-      _authSub = FirebaseAuth.instance.authStateChanges().listen((u) async {
-        _user = u;
-        _profileSub?.cancel();
-        if (u != null) {
-          final ref = FirebaseFirestore.instance.collection('users').doc(u.uid);
-          _profileSub = ref.snapshots().listen((snap) {
-            if (snap.exists && snap.data() != null) {
-              _profile = UserProfile.fromMap(snap.id, snap.data()!);
-            } else {
-              _profile = null;
-            }
-            _loading = false;
-            notifyListeners();
-          }, onError: (err) {
-            _error = err.toString();
-            _loading = false;
-            notifyListeners();
-          });
-        } else {
-          _profile = null;
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((u) async {
+      _user = u;
+      _profileSub?.cancel();
+      if (u != null) {
+        final ref = FirebaseFirestore.instance.collection('users').doc(u.uid);
+        _profileSub = ref.snapshots().listen((snap) {
+          if (snap.exists) {
+            _profile = UserProfile.fromMap(snap.id, snap.data()!);
+          } else {
+            _profile = null;
+          }
           _loading = false;
           notifyListeners();
-        }
-      }, onError: (err) {
-        _error = err.toString();
+        });
+      } else {
+        _profile = null;
         _loading = false;
         notifyListeners();
-      });
-    } catch (e) {
-      _error = e.toString();
-      _loading = false;
-      notifyListeners();
-    }
+      }
+    });
   }
 
   @override
@@ -261,12 +234,12 @@ const kTeal = Color(0xFF0D9488); // teal-600
 const kTealDark = Color(0xFF0F766E); // teal-700
 const kSlate900 = Color(0xFF0F172A);
 const kSlate700 = Color(0xFF334155);
-const kSlate600 = Color(0xFF475569);
 const kSlate500 = Color(0xFF64748B);
 const kSlate400 = Color(0xFF94A3B8);
 const kSlate200 = Color(0xFFE2E8F0);
 const kSlate100 = Color(0xFFF1F5F9);
 const kSlate50 = Color(0xFFF8FAFC);
+const kSlate600 = Color(0xFF475569);
 const kEmerald = Color(0xFF059669);
 const kEmeraldLight = Color(0xFFD1FAE5);
 const kRed = Color(0xFFDC2626);
@@ -314,12 +287,7 @@ ThemeData _buildTheme() {
 // ===========================================================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp(options: _firebaseOptions)
-        .timeout(const Duration(seconds: 15));
-  } catch (e) {
-    debugPrint("Firebase Initialization Error: $e");
-  }
+  await Firebase.initializeApp(options: _firebaseOptions);
   runApp(const SmAcademyApp());
 }
 
@@ -341,35 +309,17 @@ class _SmAcademyAppState extends State<SmAcademyApp> {
           title: 'SM Academy',
           debugShowCheckedModeBanner: false,
           theme: _buildTheme(),
-          home: _buildHome(),
+          home: _authState.loading
+              ? const SplashScreen()
+              : _authState.user == null
+                  ? LoginScreen(authState: _authState)
+                  : _authState.profile == null
+                      ? const Scaffold(
+                          body: Center(child: CircularProgressIndicator(color: kTeal)))
+                      : MainShell(authState: _authState),
         );
       },
     );
-  }
-
-  Widget _buildHome() {
-    if (_authState.loading) {
-      return const SplashScreen();
-    }
-
-    if (_authState.error != null) {
-      return Scaffold(
-        body: Center(child: Text("Initialization Error: ${_authState.error}")),
-      );
-    }
-
-    if (_authState.user == null) {
-      return LoginScreen(authState: _authState);
-    }
-
-    if (_authState.profile == null) {
-      return const Scaffold(
-        backgroundColor: kSlate50,
-        body: Center(child: CircularProgressIndicator(color: kTeal)),
-      );
-    }
-
-    return MainShell(authState: _authState);
   }
 }
 
@@ -665,14 +615,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _fetchDepartments();
   }
 
+  // ISSUE 1 FIXED: Fetch Departments correctly
   Future<void> _fetchDepartments() async {
     try {
       final snap =
           await FirebaseFirestore.instance.collection('departments').get();
       setState(() {
         _departments = snap.docs
-            .map((d) =>
-                Department(id: d.id, name: (d.data()['name'] ?? '') as String))
+            .map((d) {
+              final data = d.data();
+              return Department(id: d.id, name: (data['name'] ?? '') as String);
+            })
             .toList();
       });
     } catch (e) {
@@ -682,6 +635,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  // ISSUE 2 FIXED: Fetch Stages using 'years' collection exactly as requested
   Future<void> _fetchStages(String deptId) async {
     setState(() {
       _fetchingStages = true;
@@ -692,12 +646,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final snap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(deptId)
-          .collection('stages')
+          .collection('years')
           .get();
       setState(() {
         _stages = snap.docs
-            .map((d) =>
-                Stage(id: d.id, name: (d.data()['name'] ?? '') as String))
+            .map((d) {
+              final data = d.data();
+              return Stage(id: d.id, name: (data['name'] ?? '') as String);
+            })
             .toList();
       });
     } catch (e) {
@@ -768,10 +724,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       children: [
         Text(label,
             style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w700, color: kSlate700)),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: kSlate700)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: enabled ? onChanged : null,
           items: items,
           hint: Text(hint, style: const TextStyle(color: kSlate400)),
@@ -837,7 +795,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(_error,
-                            style: const TextStyle(color: kRed, fontSize: 13)),
+                            style:
+                                const TextStyle(color: kRed, fontSize: 13)),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -868,7 +827,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? const Center(
                             child: Padding(
                             padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(color: kTeal),
+                            child:
+                                CircularProgressIndicator(color: kTeal),
                           ))
                         : _dropdown(
                             label: 'Department',
@@ -895,7 +855,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? const Center(
                             child: Padding(
                             padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(color: kTeal),
+                            child:
+                                CircularProgressIndicator(color: kTeal),
                           ))
                         : _dropdown(
                             label: 'Academic Stage',
@@ -918,8 +879,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed:
-                            (_loading || _fetchingDepts) ? null : _register,
+                        onPressed: (_loading || _fetchingDepts) ? null : _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kEmerald,
                           foregroundColor: kWhite,
@@ -935,7 +895,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     strokeWidth: 2, color: kWhite))
                             : const Text('Complete Registration',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w800)),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800)),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -1011,8 +972,8 @@ class _MainShellState extends State<MainShell> {
             unselectedItemColor: kSlate400,
             backgroundColor: kWhite,
             elevation: 0,
-            selectedLabelStyle:
-                const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+            selectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w700, fontSize: 11),
             items: const [
               BottomNavigationBarItem(
                   icon: Icon(Icons.home_outlined),
@@ -1153,8 +1114,8 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     "You've completed $displayUsed out of $displayTotal questions. Keep going to master your curriculum!",
-                    style: const TextStyle(
-                        color: kSlate500, fontSize: 13, height: 1.5),
+                    style:
+                        const TextStyle(color: kSlate500, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -1172,18 +1133,23 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Stats cards
-            _statCard(Icons.menu_book_rounded, 'Total Questions', displayTotal,
+            _statCard(
+                Icons.menu_book_rounded, 'Total Questions', displayTotal,
                 'Available in your curriculum',
                 color: const Color(0xFFEFF6FF),
                 iconColor: const Color(0xFF2563EB)),
             const SizedBox(height: 12),
-            _statCard(Icons.check_circle_outline_rounded, 'Used Questions',
-                displayUsed, 'Questions you have attempted',
-                color: const Color(0xFFCCFBF1), iconColor: kTeal),
+            _statCard(
+                Icons.check_circle_outline_rounded, 'Used Questions', displayUsed,
+                'Questions you have attempted',
+                color: const Color(0xFFCCFBF1),
+                iconColor: kTeal),
             const SizedBox(height: 12),
-            _statCard(Icons.circle_outlined, 'Unused Questions', displayUnused,
+            _statCard(
+                Icons.circle_outlined, 'Unused Questions', displayUnused,
                 'Remaining practice material',
-                color: kSlate50, iconColor: kSlate500),
+                color: kSlate50,
+                iconColor: kSlate500),
 
             const SizedBox(height: 28),
 
@@ -1225,7 +1191,9 @@ class HomePage extends StatelessWidget {
         const SizedBox(width: 6),
         Text(label,
             style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w700, color: kSlate600)),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: kSlate600)),
       ],
     );
   }
@@ -1273,7 +1241,8 @@ class HomePage extends StatelessWidget {
                         color: kSlate900,
                         height: 1.2)),
                 Text(desc,
-                    style: const TextStyle(fontSize: 11, color: kSlate400)),
+                    style:
+                        const TextStyle(fontSize: 11, color: kSlate400)),
               ],
             ),
           ),
@@ -1327,11 +1296,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
             // Search bar
             TextField(
               onChanged: (v) => setState(() => _search = v),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Search subjects...',
-                prefixIcon: const Icon(Icons.search_rounded, color: kSlate400),
-                hintStyle: const TextStyle(color: kSlate400),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                prefixIcon:
+                    Icon(Icons.search_rounded, color: kSlate400),
+                hintStyle: TextStyle(color: kSlate400),
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
               ),
             ),
             const SizedBox(height: 20),
@@ -1339,14 +1309,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
             // List
             Expanded(
               child: subjects.isEmpty
-                  ? _emptyState(
-                      'No subjects assigned yet.\nPlease contact the Admin.')
+                  ? _emptyState('No subjects assigned yet.\nPlease contact the Admin.')
                   : filtered.isEmpty
                       ? _emptyState('No matching subjects found.')
                       : ListView.separated(
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, i) {
                             final s = filtered[i];
                             return _SubjectCard(
@@ -1382,10 +1350,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration:
-                  const BoxDecoration(color: kSlate50, shape: BoxShape.circle),
-              child:
-                  const Icon(Icons.book_outlined, size: 36, color: kSlate400),
+              decoration: const BoxDecoration(
+                  color: kSlate50, shape: BoxShape.circle),
+              child: const Icon(Icons.book_outlined,
+                  size: 36, color: kSlate400),
             ),
             const SizedBox(height: 16),
             Text(msg,
@@ -1451,7 +1419,8 @@ class _SubjectCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: kSlate400),
+            const Icon(Icons.chevron_right_rounded,
+                color: kSlate400),
           ],
         ),
       ),
@@ -1539,7 +1508,8 @@ class _LecturesPageState extends State<LecturesPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.subjectName,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            style: const TextStyle(
+                fontWeight: FontWeight.w800, fontSize: 18)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
@@ -1556,8 +1526,8 @@ class _LecturesPageState extends State<LecturesPage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(20),
-                          decoration: const BoxDecoration(
-                              color: kSlate50, shape: BoxShape.circle),
+                          decoration:
+                              const BoxDecoration(color: kSlate50, shape: BoxShape.circle),
                           child: const Icon(Icons.book_outlined,
                               size: 36, color: kSlate400),
                         ),
@@ -1613,10 +1583,8 @@ class _LecturesPageState extends State<LecturesPage> {
                                 color: const Color(0xFFCCFBF1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(
-                                  Icons.play_circle_outline_rounded,
-                                  color: kTeal,
-                                  size: 24),
+                              child: const Icon(Icons.play_circle_outline_rounded,
+                                  color: kTeal, size: 24),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -1738,7 +1706,8 @@ class _QuizPageState extends State<QuizPage> {
           .where('userId', isEqualTo: profile.uid)
           .get();
       for (final d in bSnap.docs) {
-        _flagged[d.data()['questionId'] as String] = true;
+        final data = d.data();
+        _flagged[data['questionId'] as String] = true;
       }
     } catch (e) {
       debugPrint('Error fetching quiz: $e');
@@ -1773,8 +1742,9 @@ class _QuizPageState extends State<QuizPage> {
         );
       });
 
-      final userRef =
-          FirebaseFirestore.instance.collection('users').doc(profile.uid);
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(profile.uid);
       final currentUnused = profile.stats.unusedQuestions;
       final Map<String, dynamic> updates = {
         'stats.usedQuestions': FieldValue.increment(1),
@@ -1790,21 +1760,32 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
+  // ISSUE 3A & 3B FIXED: Bookmark Save/Delete Logic
   Future<void> _toggleBookmark(String questionId) async {
     final profile = widget.authState.profile;
     if (profile == null) return;
-    final bookmarkId = '${profile.uid}_$questionId';
-    final ref =
-        FirebaseFirestore.instance.collection('bookmarks').doc(bookmarkId);
+    
     try {
       if (_flagged[questionId] == true) {
-        await ref.delete();
+        // DELETE Bookmark
+        final snap = await FirebaseFirestore.instance
+            .collection('bookmarks')
+            .where('userId', isEqualTo: profile.uid)
+            .where('questionId', isEqualTo: questionId)
+            .get();
+        for (var doc in snap.docs) {
+          await doc.reference.delete();
+        }
         setState(() => _flagged[questionId] = false);
       } else {
-        await ref.set({
+        // SAVE Bookmark (matching Web App exactly)
+        final String qPath = 'departments/${widget.departmentId}/stages/${widget.stageId}/subjects/${widget.subjectId}/lectures/${widget.lectureId}/questions/$questionId';
+        
+        await FirebaseFirestore.instance.collection('bookmarks').add({
           'userId': profile.uid,
           'questionId': questionId,
-          'addedAt': FieldValue.serverTimestamp(),
+          'questionPath': qPath,
+          'createdAt': FieldValue.serverTimestamp(),
         });
         setState(() => _flagged[questionId] = true);
       }
@@ -1939,8 +1920,9 @@ class _QuizPageState extends State<QuizPage> {
                                           ? Icons.check_circle_outline
                                           : Icons.error_outline,
                                       size: 12,
-                                      color:
-                                          qProgress.isCorrect ? kEmerald : kRed,
+                                      color: qProgress.isCorrect
+                                          ? kEmerald
+                                          : kRed,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -1990,14 +1972,17 @@ class _QuizPageState extends State<QuizPage> {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed:
-                                    isAnswered ? _resetQuestion : _showAnswer,
+                                onPressed: isAnswered
+                                    ? _resetQuestion
+                                    : _showAnswer,
                                 style: OutlinedButton.styleFrom(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  side: const BorderSide(color: kSlate200),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16),
+                                  side:
+                                      const BorderSide(color: kSlate200),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16)),
+                                      borderRadius:
+                                          BorderRadius.circular(16)),
                                 ),
                                 icon: Icon(
                                     isAnswered
@@ -2015,19 +2000,22 @@ class _QuizPageState extends State<QuizPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: _currentIndex < _questions.length - 1
-                                    ? () => setState(() {
-                                          _currentIndex++;
-                                          _expandedExplanations.clear();
-                                        })
-                                    : null,
+                                onPressed:
+                                    _currentIndex < _questions.length - 1
+                                        ? () => setState(() {
+                                              _currentIndex++;
+                                              _expandedExplanations
+                                                  .clear();
+                                            })
+                                        : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: kSlate900,
                                   foregroundColor: kWhite,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16)),
+                                      borderRadius:
+                                          BorderRadius.circular(16)),
                                 ),
                                 child: Text(
                                     _currentIndex == _questions.length - 1
@@ -2061,7 +2049,8 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
-  Widget _quizHeader(Question q, bool isAnswered, _QuestionProgress? qp) {
+  Widget _quizHeader(
+      Question q, bool isAnswered, _QuestionProgress? qp) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -2100,11 +2089,7 @@ class _QuizPageState extends State<QuizPage> {
             icon: const Icon(Icons.text_fields_rounded,
                 color: kSlate500, size: 20),
             onPressed: () => setState(() {
-              _textSize = _textSize == 18
-                  ? 22
-                  : _textSize == 22
-                      ? 15
-                      : 18;
+              _textSize = _textSize == 18 ? 22 : _textSize == 22 ? 15 : 18;
             }),
           ),
           // Bookmark
@@ -2119,8 +2104,8 @@ class _QuizPageState extends State<QuizPage> {
           ),
           // Sidebar toggle
           IconButton(
-            icon:
-                const Icon(Icons.grid_view_rounded, color: kSlate500, size: 20),
+            icon: const Icon(Icons.grid_view_rounded,
+                color: kSlate500, size: 20),
             onPressed: () => setState(() => _showSidebar = true),
           ),
         ],
@@ -2128,8 +2113,8 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
-  Widget _buildOptionCard(
-      QuizOption opt, int idx, bool isAnswered, _QuestionProgress? qp) {
+  Widget _buildOptionCard(QuizOption opt, int idx, bool isAnswered,
+      _QuestionProgress? qp) {
     final isSelected = qp?.selectedOptionId == opt.id;
     final isExpanded = _expandedExplanations.contains(opt.id);
 
@@ -2210,7 +2195,8 @@ class _QuizPageState extends State<QuizPage> {
                 if (isAnswered && isSelected && !opt.isCorrect)
                   const Padding(
                     padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.cancel_rounded, color: kRed, size: 22),
+                    child:
+                        Icon(Icons.cancel_rounded, color: kRed, size: 22),
                   ),
               ],
             ),
@@ -2313,7 +2299,8 @@ class _QuizPageState extends State<QuizPage> {
                   style: TextStyle(fontWeight: FontWeight.w800)),
               label: const Icon(Icons.chevron_right_rounded),
               style: TextButton.styleFrom(
-                  foregroundColor: kTeal, iconColor: kTeal),
+                  foregroundColor: kTeal,
+                  iconColor: kTeal),
             ),
           ),
         ],
@@ -2353,7 +2340,8 @@ class _QuizPageState extends State<QuizPage> {
                         IconButton(
                           icon:
                               const Icon(Icons.close_rounded, color: kSlate400),
-                          onPressed: () => setState(() => _showSidebar = false),
+                          onPressed: () =>
+                              setState(() => _showSidebar = false),
                         ),
                       ],
                     ),
@@ -2384,7 +2372,8 @@ class _QuizPageState extends State<QuizPage> {
                             : _answeredCount / _questions.length,
                         minHeight: 8,
                         backgroundColor: kSlate200,
-                        valueColor: const AlwaysStoppedAnimation<Color>(kTeal),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(kTeal),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -2410,7 +2399,8 @@ class _QuizPageState extends State<QuizPage> {
                           if (qp?.isAnswered == true) {
                             bg = qp!.isCorrect ? kEmerald : kRed;
                             textColor = kWhite;
-                            borderColor = qp.isCorrect ? kEmerald : kRed;
+                            borderColor =
+                                qp.isCorrect ? kEmerald : kRed;
                           }
 
                           return GestureDetector(
@@ -2423,7 +2413,9 @@ class _QuizPageState extends State<QuizPage> {
                               decoration: BoxDecoration(
                                 color: bg,
                                 border: Border.all(
-                                    color: isActive ? kSlate900 : borderColor,
+                                    color: isActive
+                                        ? kSlate900
+                                        : borderColor,
                                     width: isActive ? 2.5 : 1.5),
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -2490,7 +2482,8 @@ class _QuizPageState extends State<QuizPage> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.2), blurRadius: 40)
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 40)
                 ],
               ),
               child: Column(
@@ -2591,10 +2584,12 @@ class _QuizPageState extends State<QuizPage> {
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
-                      onPressed: () => setState(() => _showSummary = false),
+                      onPressed: () =>
+                          setState(() => _showSummary = false),
                       child: const Text('Review Answers',
                           style: TextStyle(
-                              color: kSlate500, fontWeight: FontWeight.w700)),
+                              color: kSlate500,
+                              fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -2629,6 +2624,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
     _fetchBookmarks();
   }
 
+  // ISSUE 3C FIXED: Fetching bookmarks completely
   Future<void> _fetchBookmarks() async {
     final profile = widget.authState.profile;
     if (profile == null) return;
@@ -2645,17 +2641,15 @@ class _BookmarksPageState extends State<BookmarksPage> {
       for (final d in snap.docs) {
         final data = d.data();
         final questionId = data['questionId'] as String? ?? '';
+        final questionPath = data['questionPath'] as String?;
         Question? q;
 
         try {
-          // Fix: Using collectionGroup to locate the deeply nested question by document ID
-          final qSnap = await FirebaseFirestore.instance
-              .collectionGroup('questions')
-              .where(FieldPath.documentId, isEqualTo: questionId)
-              .get();
-
-          if (qSnap.docs.isNotEmpty) {
-            q = Question.fromMap(qSnap.docs.first.id, qSnap.docs.first.data());
+          if (questionPath != null && questionPath.isNotEmpty) {
+            final qSnap = await FirebaseFirestore.instance.doc(questionPath).get();
+            if (qSnap.exists && qSnap.data() != null) {
+              q = Question.fromMap(qSnap.id, qSnap.data()!);
+            }
           }
         } catch (e) {
           debugPrint('Error fetching bookmark question: $e');
@@ -2674,14 +2668,21 @@ class _BookmarksPageState extends State<BookmarksPage> {
     }
   }
 
+  // ISSUE 3B FIXED: Deleting bookmark by matching userId and questionId
   Future<void> _removeBookmark(String questionId) async {
     final profile = widget.authState.profile;
     if (profile == null) return;
     try {
-      await FirebaseFirestore.instance
+      final snap = await FirebaseFirestore.instance
           .collection('bookmarks')
-          .doc('${profile.uid}_$questionId')
-          .delete();
+          .where('userId', isEqualTo: profile.uid)
+          .where('questionId', isEqualTo: questionId)
+          .get();
+
+      for (var doc in snap.docs) {
+        await doc.reference.delete();
+      }
+
       setState(() {
         _bookmarkedItems.removeWhere((i) => i['questionId'] == questionId);
         if (_expandedId == questionId) _expandedId = null;
@@ -2710,7 +2711,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
             const SizedBox(height: 20),
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: kTeal))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: kTeal))
                   : _bookmarkedItems.isEmpty
                       ? Center(
                           child: Column(
@@ -2720,25 +2722,24 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                 padding: const EdgeInsets.all(20),
                                 decoration: const BoxDecoration(
                                     color: kSlate50, shape: BoxShape.circle),
-                                child: const Icon(Icons.bookmark_border_rounded,
-                                    size: 36, color: kSlate400),
+                                child: const Icon(
+                                    Icons.bookmark_border_rounded,
+                                    size: 36,
+                                    color: kSlate400),
                               ),
                               const SizedBox(height: 16),
                               const Text(
                                 'No bookmarks yet.\nSave questions during a quiz to find them here.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: kSlate500,
-                                    fontSize: 14,
-                                    height: 1.5),
+                                style:
+                                    TextStyle(color: kSlate500, fontSize: 14, height: 1.5),
                               ),
                             ],
                           ),
                         )
                       : ListView.separated(
                           itemCount: _bookmarkedItems.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, i) {
                             final item = _bookmarkedItems[i];
                             final Question q = item['question'] as Question;
@@ -2771,11 +2772,15 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                         color: const Color(0xFFCCFBF1),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: const Icon(Icons.bookmark_rounded,
-                                          color: kTeal, size: 20),
+                                      child: const Icon(
+                                          Icons.bookmark_rounded,
+                                          color: kTeal,
+                                          size: 20),
                                     ),
                                     title: Text(
-                                      q.text.isEmpty ? 'Question' : q.text,
+                                      q.text.isEmpty
+                                          ? 'Question'
+                                          : q.text,
                                       style: const TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w700,
@@ -2791,8 +2796,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                         Icon(
                                           isExpanded
                                               ? Icons.keyboard_arrow_up_rounded
-                                              : Icons
-                                                  .keyboard_arrow_down_rounded,
+                                              : Icons.keyboard_arrow_down_rounded,
                                           color: kSlate400,
                                         ),
                                         IconButton(
@@ -2800,25 +2804,25 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                               Icons.delete_outline_rounded,
                                               color: kRed,
                                               size: 20),
-                                          onPressed: () => _removeBookmark(qId),
+                                          onPressed: () =>
+                                              _removeBookmark(qId),
                                         ),
                                       ],
                                     ),
                                   ),
                                   if (isExpanded) ...[
-                                    const Divider(height: 1, color: kSlate100),
+                                    const Divider(
+                                        height: 1, color: kSlate100),
                                     Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
-                                        children:
-                                            q.options.asMap().entries.map((e) {
+                                        children: q.options.asMap().entries.map((e) {
                                           final idx = e.key;
                                           final opt = e.value;
                                           return Container(
-                                            margin: const EdgeInsets.only(
-                                                bottom: 8),
+                                            margin: const EdgeInsets.only(bottom: 8),
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
                                               color: opt.isCorrect
@@ -2837,7 +2841,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                                 Text(
                                                   String.fromCharCode(65 + idx),
                                                   style: TextStyle(
-                                                    fontWeight: FontWeight.w900,
+                                                    fontWeight:
+                                                        FontWeight.w900,
                                                     color: opt.isCorrect
                                                         ? kEmerald
                                                         : kSlate500,
@@ -2852,16 +2857,14 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                                             ? const Color(
                                                                 0xFF065F46)
                                                             : kSlate700,
-                                                        fontWeight: opt
-                                                                .isCorrect
+                                                        fontWeight: opt.isCorrect
                                                             ? FontWeight.w700
                                                             : FontWeight.w500,
                                                       )),
                                                 ),
                                                 if (opt.isCorrect)
                                                   const Icon(
-                                                      Icons
-                                                          .check_circle_rounded,
+                                                      Icons.check_circle_rounded,
                                                       color: kEmerald,
                                                       size: 18),
                                               ],
@@ -2917,7 +2920,8 @@ class ProfilePage extends StatelessWidget {
                       offset: const Offset(0, 4))
                 ],
               ),
-              child: const Icon(Icons.person_rounded, color: kTeal, size: 48),
+              child: const Icon(Icons.person_rounded,
+                  color: kTeal, size: 48),
             ),
             const SizedBox(height: 12),
             Text(profile.name,
@@ -2933,22 +2937,20 @@ class ProfilePage extends StatelessWidget {
             _sectionCard(
               title: 'Account Settings',
               children: [
-                _profileRow(Icons.person_outline_rounded,
-                    'Personal Information', profile.name),
+                _profileRow(
+                    Icons.person_outline_rounded, 'Personal Information',
+                    profile.name),
                 _divider(),
                 _profileRow(
-                    Icons.mail_outline_rounded, 'Email Address', profile.email),
+                    Icons.mail_outline_rounded, 'Email Address',
+                    profile.email),
                 _divider(),
-                _profileRow(
-                    Icons.business_outlined,
-                    'Department',
+                _profileRow(Icons.business_outlined, 'Department',
                     profile.departmentName.isNotEmpty
                         ? profile.departmentName
                         : 'Not Assigned'),
                 _divider(),
-                _profileRow(
-                    Icons.school_outlined,
-                    'Academic Stage',
+                _profileRow(Icons.school_outlined, 'Academic Stage',
                     profile.stageName.isNotEmpty
                         ? profile.stageName
                         : 'Not Assigned'),
@@ -2965,9 +2967,11 @@ class ProfilePage extends StatelessWidget {
                 _divider(),
                 _preferenceRow(Icons.dark_mode_outlined, 'Dark Mode', false),
                 _divider(),
-                _chevronRow(Icons.shield_outlined, 'Privacy & Security'),
+                _chevronRow(
+                    Icons.shield_outlined, 'Privacy & Security'),
                 _divider(),
-                _chevronRow(Icons.settings_outlined, 'App Settings'),
+                _chevronRow(
+                    Icons.settings_outlined, 'App Settings'),
               ],
             ),
             const SizedBox(height: 20),
@@ -2988,8 +2992,8 @@ class ProfilePage extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Sign Out',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w800)),
               ),
             ),
             const SizedBox(height: 24),
@@ -3006,7 +3010,8 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _sectionCard({required String title, required List<Widget> children}) {
+  Widget _sectionCard(
+      {required String title, required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
         color: kWhite,
@@ -3023,7 +3028,8 @@ class ProfilePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Text(title.toUpperCase(),
                 style: const TextStyle(
                     fontSize: 10,
@@ -3116,7 +3122,8 @@ class ProfilePage extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Align(
-              alignment: enabled ? Alignment.centerRight : Alignment.centerLeft,
+              alignment:
+                  enabled ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
                 width: 18,
                 height: 18,
