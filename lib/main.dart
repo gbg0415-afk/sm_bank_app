@@ -4,8 +4,8 @@
 //
 //  Firebase Firestore paths (identical to original web app):
 //    departments/                                          → departments list
-//    departments/{deptId}/stages/                          → stages per dept
-//    departments/{deptId}/stages/{stageId}/subjects/
+//    departments/{deptId}/years/                           → stages per dept
+//    departments/{deptId}/years/{stageId}/subjects/
 //      /{subjectId}/lectures/{lectureId}/questions/        → quiz questions
 //    users/{uid}                                           → user profile
 //    users/{uid}/progress/{questionId}                     → answered Qs
@@ -309,20 +309,30 @@ ThemeData _buildTheme() => ThemeData(
 //  ENTRY POINT
 // ===========================================================================
 
-// FIX 1: Robust main() with error handling so splash always shows first,
-// then Firebase is initialised, then auth state determines routing.
-void main() {
-  // Must be called before any Flutter framework usage.
+bool _firebaseInitError = false;
+
+Future<void> main() async {
+  // Ensure framework is ready
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Catch uncaught Flutter framework errors (prevents blank screen on error).
+  // Catch uncaught Flutter framework errors
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     debugPrint('Flutter error: ${details.exceptionAsString()}');
   };
 
-  // Run the app immediately so the splash screen appears right away.
-  // Firebase is initialised inside the root widget so the UI is never blocked.
+  // Ensure Firebase is properly initialized before starting the app
+  try {
+    await Firebase.initializeApp(options: _firebaseOptions);
+    // Correct Firestore settings to prevent timeout issues
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+    );
+  } catch (e) {
+    debugPrint('Firebase init error: $e');
+    _firebaseInitError = true;
+  }
+
   runApp(const _SmAcademyRoot());
 }
 
@@ -334,32 +344,14 @@ class _SmAcademyRoot extends StatefulWidget {
 }
 
 class _SmAcademyRootState extends State<_SmAcademyRoot> {
-  // AuthState is created only after Firebase is ready.
+  // AuthState is created safely since Firebase is fully initialized in main.
   AuthState? _auth;
-  bool _firebaseReady = false;
-  String _firebaseError = '';
 
   @override
   void initState() {
     super.initState();
-    _initFirebase();
-  }
-
-  Future<void> _initFirebase() async {
-    try {
-      await Firebase.initializeApp(options: _firebaseOptions);
-      final auth = AuthState();
-      if (mounted) {
-        setState(() {
-          _auth = auth;
-          _firebaseReady = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('Firebase init error: $e');
-      if (mounted) {
-        setState(() => _firebaseError = e.toString());
-      }
+    if (!_firebaseInitError) {
+      _auth = AuthState();
     }
   }
 
@@ -378,18 +370,18 @@ class _SmAcademyRootState extends State<_SmAcademyRoot> {
       home: Builder(
         builder: (_) {
           // Show error screen if Firebase failed to initialise.
-          if (_firebaseError.isNotEmpty) {
-            return Scaffold(
+          if (_firebaseInitError || _auth == null) {
+            return const Scaffold(
               backgroundColor: kSlate50,
               body: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, color: kRed, size: 48),
-                      const SizedBox(height: 16),
-                      const Text(
+                      Icon(Icons.error_outline, color: kRed, size: 48),
+                      SizedBox(height: 16),
+                      Text(
                         'Failed to connect to server.\nPlease check your internet connection.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: kSlate700, fontSize: 15),
@@ -399,11 +391,6 @@ class _SmAcademyRootState extends State<_SmAcademyRoot> {
                 ),
               ),
             );
-          }
-
-          // Show splash while Firebase is initialising.
-          if (!_firebaseReady || _auth == null) {
-            return const _SplashScreen();
           }
 
           // Firebase is ready – delegate routing to AuthState.
@@ -441,15 +428,15 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: kTeal,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _AppLogo(size: 100, bgColor: kWhite),
-            const SizedBox(height: 24),
-            const Text(
+            SizedBox(height: 24),
+            Text(
               'SM ACADEMY',
               style: TextStyle(
                 color: kWhite,
@@ -458,8 +445,8 @@ class _SplashScreen extends StatelessWidget {
                 letterSpacing: 4,
               ),
             ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
+            SizedBox(height: 48),
+            CircularProgressIndicator(
               color: kWhite,
               strokeWidth: 2.5,
             ),
@@ -799,21 +786,15 @@ class _RegisterScreenState extends State<_RegisterScreen> {
 
   // -- Firebase fetches ----------------------------------------------------
 
-  // FIX 2: Fetch departments from Firebase 'departments' collection dynamically.
-  // Tries 'name' field first, then 'title', then falls back to the document ID.
+  // Fetch departments from Firebase 'departments' collection dynamically.
   Future<void> _fetchDepartments() async {
     try {
       final snap =
           await FirebaseFirestore.instance.collection('departments').get();
       setState(() {
         _departments = snap.docs.map((d) {
-          final data = d.data();
-          final name = (data['name'] as String?)?.isNotEmpty == true
-              ? data['name'] as String
-              : (data['title'] as String?)?.isNotEmpty == true
-                  ? data['title'] as String
-                  : d.id;
-          return Department(id: d.id, name: name);
+          // Use the Document ID as the exact department name
+          return Department(id: d.id, name: d.id);
         }).toList();
       });
     } catch (e) {
@@ -823,9 +804,7 @@ class _RegisterScreenState extends State<_RegisterScreen> {
     }
   }
 
-  /// Path: departments/{deptId}/stages  – same as original web app.
-  // FIX 3: Fetch academic stages from departments/{deptId}/years (not 'stages').
-  // Also tries 'name' then 'title' field for the stage name.
+  // Fetch academic stages from departments/{deptId}/years.
   Future<void> _fetchStages(String deptId) async {
     setState(() {
       _fetchingStages = true;
@@ -836,17 +815,12 @@ class _RegisterScreenState extends State<_RegisterScreen> {
       final snap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(deptId)
-          .collection('years') // corrected path per Firebase structure spec
+          .collection('years') // Path updated to match exact database structure
           .get();
       setState(() {
         _stages = snap.docs.map((d) {
-          final data = d.data();
-          final name = (data['name'] as String?)?.isNotEmpty == true
-              ? data['name'] as String
-              : (data['title'] as String?)?.isNotEmpty == true
-                  ? data['title'] as String
-                  : d.id;
-          return Stage(id: d.id, name: name);
+          // Use the Document ID as the exact stage name
+          return Stage(id: d.id, name: d.id);
         }).toList();
       });
     } catch (e) {
@@ -931,7 +905,7 @@ class _RegisterScreenState extends State<_RegisterScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: enabled ? onChanged : null,
           items: items,
           isExpanded: true,
@@ -1763,11 +1737,11 @@ class _LecturesPageState extends State<_LecturesPage> {
   }
 
   Future<void> _fetchLectures() async {
-    // Path: departments/{deptId}/stages/{stageId}/subjects/{subjectId}/lectures
+    // Path correctly matches database structure: departments/{deptId}/years/{stageId}/subjects/{subjectId}/lectures
     final ref = FirebaseFirestore.instance
         .collection('departments')
         .doc(widget.departmentId)
-        .collection('stages')
+        .collection('years')
         .doc(widget.stageId)
         .collection('subjects')
         .doc(widget.subjectId)
@@ -2006,12 +1980,12 @@ class _QuizPageState extends State<_QuizPage> {
     if (uid == null) return;
 
     try {
-      // Questions path:
-      // departments/{deptId}/stages/{stageId}/subjects/{subjectId}/lectures/{lectureId}/questions
+      // Questions path updated to correctly use years:
+      // departments/{deptId}/years/{stageId}/subjects/{subjectId}/lectures/{lectureId}/questions
       final qSnap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(widget.departmentId)
-          .collection('stages')
+          .collection('years')
           .doc(widget.stageId)
           .collection('subjects')
           .doc(widget.subjectId)
@@ -2150,8 +2124,8 @@ class _QuizPageState extends State<_QuizPage> {
   Future<void> _toggleBookmark(String questionId) async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
-    // FIX 5: Delete by querying userId + questionId (not composite doc ID),
-    // so we match the exact document regardless of how it was originally saved.
+
+    // Delete by querying userId + questionId exactly as requested
     final bookmarksRef = FirebaseFirestore.instance.collection('bookmarks');
     try {
       if (_bookmarked[questionId] == true) {
@@ -2165,15 +2139,15 @@ class _QuizPageState extends State<_QuizPage> {
         }
         setState(() => _bookmarked[questionId] = false);
       } else {
-        // FIX 4: Save bookmark with all required fields.
+        // Save bookmark with exactly the requested fields and correct paths.
         final questionPath =
-            'departments/${widget.departmentId}/stages/${widget.stageId}/subjects/${widget.subjectId}/lectures/${widget.lectureId}/questions/$questionId';
-        // Use a composite doc ID so duplicate saves are idempotent.
+            'departments/${widget.departmentId}/years/${widget.stageId}/subjects/${widget.subjectId}/lectures/${widget.lectureId}/questions/$questionId';
+
         await bookmarksRef.doc('${uid}_$questionId').set(<String, dynamic>{
           'userId': uid,
           'questionId': questionId,
           'questionPath': questionPath,
-          'createdAt': FieldValue.serverTimestamp(),
+          'AddedAt': FieldValue.serverTimestamp(),
         });
         setState(() => _bookmarked[questionId] = true);
       }
@@ -3000,9 +2974,7 @@ class _BookmarksPageState extends State<_BookmarksPage> {
     _fetchBookmarks();
   }
 
-  // FIX 6: Fetch all bookmarks for the current user and display them properly.
-  // Shows the bookmark even if the full question data cannot be loaded, so the
-  // page never incorrectly shows "No bookmarks yet" when records exist.
+  // Fetch all bookmarks for the current user and display them properly.
   Future<void> _fetchBookmarks() async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
@@ -3068,8 +3040,7 @@ class _BookmarksPageState extends State<_BookmarksPage> {
     }
   }
 
-  // FIX 5: Delete bookmark by querying userId + questionId fields,
-  // not by composite doc ID, to reliably find and delete the document.
+  // Delete bookmark by querying userId + questionId fields.
   Future<void> _removeBookmark(String questionId) async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
@@ -3302,7 +3273,7 @@ class _ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<_ProfilePage> {
-  // FIX 7: Track toggle states so buttons are interactive.
+  // Track toggle states so buttons are interactive.
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
 
@@ -3382,7 +3353,7 @@ class _ProfilePageState extends State<_ProfilePage> {
             _sectionCard(
               title: 'Preferences',
               children: <Widget>[
-                // FIX 7: Pass live state so tapping actually toggles the switch.
+                // Pass live state so tapping actually toggles the switch.
                 _toggleRow(Icons.notifications_outlined, 'Notifications',
                     _notificationsEnabled, () {
                   setState(
@@ -3403,7 +3374,7 @@ class _ProfilePageState extends State<_ProfilePage> {
             ),
             const SizedBox(height: 20),
 
-            // FIX 7: Sign-out with confirmation dialog.
+            // Sign-out with confirmation dialog.
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -3557,7 +3528,7 @@ class _ProfilePageState extends State<_ProfilePage> {
         ),
       );
 
-  // FIX 7: _toggleRow now accepts an onTap callback so the switch is interactive.
+  // _toggleRow accepts an onTap callback so the switch is interactive.
   Widget _toggleRow(
           IconData icon, String label, bool enabled, VoidCallback onTap) =>
       GestureDetector(
@@ -3630,7 +3601,7 @@ class _ProfilePageState extends State<_ProfilePage> {
         ),
       );
 
-  // FIX 7: _chevronRow now accepts BuildContext and shows an informational dialog on tap.
+  // _chevronRow accepts BuildContext and shows an informational dialog on tap.
   Widget _chevronRow(BuildContext context, IconData icon, String label) =>
       GestureDetector(
         onTap: () {
