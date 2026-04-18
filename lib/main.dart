@@ -311,8 +311,8 @@ ThemeData _buildTheme() => ThemeData(
 
 bool _firebaseInitError = false;
 
-Future<void> main() async {
-  // Ensure framework is ready
+void main() async {
+  // Problem 1 Fix: Ensure bindings are initialized first
   WidgetsFlutterBinding.ensureInitialized();
 
   // Catch uncaught Flutter framework errors
@@ -321,18 +321,20 @@ Future<void> main() async {
     debugPrint('Flutter error: ${details.exceptionAsString()}');
   };
 
-  // Ensure Firebase is properly initialized before starting the app
+  // Problem 1 Fix: Add proper initialization and error handling to see the REAL error
   try {
+    debugPrint("Attempting to initialize Firebase...");
     await Firebase.initializeApp(options: _firebaseOptions);
-    // Correct Firestore settings to prevent timeout issues
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-    );
-  } catch (e) {
-    debugPrint('Firebase init error: $e');
+    debugPrint("Firebase initialized successfully!");
+  } catch (e, stackTrace) {
+    debugPrint("=========================================");
+    debugPrint("FIREBASE INIT ERROR: $e");
+    debugPrint(stackTrace.toString());
+    debugPrint("=========================================");
     _firebaseInitError = true;
   }
 
+  // Run the app
   runApp(const _SmAcademyRoot());
 }
 
@@ -344,7 +346,6 @@ class _SmAcademyRoot extends StatefulWidget {
 }
 
 class _SmAcademyRootState extends State<_SmAcademyRoot> {
-  // AuthState is created safely since Firebase is fully initialized in main.
   AuthState? _auth;
 
   @override
@@ -786,14 +787,14 @@ class _RegisterScreenState extends State<_RegisterScreen> {
 
   // -- Firebase fetches ----------------------------------------------------
 
-  // Fetch departments from Firebase 'departments' collection dynamically.
+  // Problem 2 Fix: Fetch departments and exclusively use Document ID for name
   Future<void> _fetchDepartments() async {
     try {
       final snap =
           await FirebaseFirestore.instance.collection('departments').get();
       setState(() {
         _departments = snap.docs.map((d) {
-          // Use the Document ID as the exact department name
+          // EXPLICITLY use the Document ID as the name
           return Department(id: d.id, name: d.id);
         }).toList();
       });
@@ -804,7 +805,7 @@ class _RegisterScreenState extends State<_RegisterScreen> {
     }
   }
 
-  // Fetch academic stages from departments/{deptId}/years.
+  // Problem 3 Fix: Fetch stages from 'years' and exclusively use Document ID for name
   Future<void> _fetchStages(String deptId) async {
     setState(() {
       _fetchingStages = true;
@@ -815,11 +816,11 @@ class _RegisterScreenState extends State<_RegisterScreen> {
       final snap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(deptId)
-          .collection('years') // Path updated to match exact database structure
+          .collection('years') // EXPLICITLY using 'years' per requirements
           .get();
       setState(() {
         _stages = snap.docs.map((d) {
-          // Use the Document ID as the exact stage name
+          // EXPLICITLY use the Document ID as the name
           return Stage(id: d.id, name: d.id);
         }).toList();
       });
@@ -1737,7 +1738,7 @@ class _LecturesPageState extends State<_LecturesPage> {
   }
 
   Future<void> _fetchLectures() async {
-    // Path correctly matches database structure: departments/{deptId}/years/{stageId}/subjects/{subjectId}/lectures
+    // UPDATED PATH: using 'years' per strict rules
     final ref = FirebaseFirestore.instance
         .collection('departments')
         .doc(widget.departmentId)
@@ -1980,8 +1981,7 @@ class _QuizPageState extends State<_QuizPage> {
     if (uid == null) return;
 
     try {
-      // Questions path updated to correctly use years:
-      // departments/{deptId}/years/{stageId}/subjects/{subjectId}/lectures/{lectureId}/questions
+      // UPDATED PATH: using 'years' per strict rules
       final qSnap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(widget.departmentId)
@@ -2121,15 +2121,14 @@ class _QuizPageState extends State<_QuizPage> {
     });
   }
 
+  // FIX 4: Ensure bookmarks use exact path structure and field names
   Future<void> _toggleBookmark(String questionId) async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
 
-    // Delete by querying userId + questionId exactly as requested
     final bookmarksRef = FirebaseFirestore.instance.collection('bookmarks');
     try {
       if (_bookmarked[questionId] == true) {
-        // Query for all bookmark docs matching this user + question and delete them.
         final existingDocs = await bookmarksRef
             .where('userId', isEqualTo: uid)
             .where('questionId', isEqualTo: questionId)
@@ -2139,10 +2138,11 @@ class _QuizPageState extends State<_QuizPage> {
         }
         setState(() => _bookmarked[questionId] = false);
       } else {
-        // Save bookmark with exactly the requested fields and correct paths.
+        // EXPLICIT PATH using 'years'
         final questionPath =
             'departments/${widget.departmentId}/years/${widget.stageId}/subjects/${widget.subjectId}/lectures/${widget.lectureId}/questions/$questionId';
 
+        // EXPLICIT FIELDS based on strict requirements
         await bookmarksRef.doc('${uid}_$questionId').set(<String, dynamic>{
           'userId': uid,
           'questionId': questionId,
@@ -3273,7 +3273,7 @@ class _ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<_ProfilePage> {
-  // Track toggle states so buttons are interactive.
+  // FIX 7: Track toggle states so buttons are interactive.
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
 
@@ -3353,7 +3353,7 @@ class _ProfilePageState extends State<_ProfilePage> {
             _sectionCard(
               title: 'Preferences',
               children: <Widget>[
-                // Pass live state so tapping actually toggles the switch.
+                // FIX 7: Pass live state so tapping actually toggles the switch.
                 _toggleRow(Icons.notifications_outlined, 'Notifications',
                     _notificationsEnabled, () {
                   setState(
@@ -3374,7 +3374,7 @@ class _ProfilePageState extends State<_ProfilePage> {
             ),
             const SizedBox(height: 20),
 
-            // Sign-out with confirmation dialog.
+            // FIX 7: Sign-out with confirmation dialog.
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -3528,7 +3528,7 @@ class _ProfilePageState extends State<_ProfilePage> {
         ),
       );
 
-  // _toggleRow accepts an onTap callback so the switch is interactive.
+  // FIX 7: _toggleRow now accepts an onTap callback so the switch is interactive.
   Widget _toggleRow(
           IconData icon, String label, bool enabled, VoidCallback onTap) =>
       GestureDetector(
@@ -3601,7 +3601,7 @@ class _ProfilePageState extends State<_ProfilePage> {
         ),
       );
 
-  // _chevronRow accepts BuildContext and shows an informational dialog on tap.
+  // FIX 7: _chevronRow now accepts BuildContext and shows an informational dialog on tap.
   Widget _chevronRow(BuildContext context, IconData icon, String label) =>
       GestureDetector(
         onTap: () {
