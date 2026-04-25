@@ -1,15 +1,6 @@
 // =============================================================================
 //  SM Academy – Flutter App
-//  Single-file implementation converted from the React/TypeScript web app.
-//
-//  Firebase Firestore paths (identical to original web app):
-//    departments/                                          → departments list
-//    departments/{deptId}/stages/                          → stages per dept
-//    departments/{deptId}/stages/{stageId}/subjects/
-//      /{subjectId}/lectures/{lectureId}/questions/        → quiz questions
-//    users/{uid}                                           → user profile
-//    users/{uid}/progress/{questionId}                     → answered Qs
-//    bookmarks/{uid}_{questionId}                          → bookmarks
+//  Single-file implementation.
 //
 //  pubspec.yaml dependencies required:
 //    firebase_core: ^3.6.0
@@ -24,7 +15,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ---------------------------------------------------------------------------
-// Firebase configuration – mirrors the original web app's firebaseConfig.
+// Firebase configuration
 // ---------------------------------------------------------------------------
 const FirebaseOptions _firebaseOptions = FirebaseOptions(
   apiKey: 'AIzaSyBAzEF3ygdped8Mi9Gc4snGzJXZF3lJA6U',
@@ -36,7 +27,7 @@ const FirebaseOptions _firebaseOptions = FirebaseOptions(
 );
 
 // ===========================================================================
-//  DESIGN TOKENS  (all declared at top-level, before any class)
+//  DESIGN TOKENS & GLOBALS
 // ===========================================================================
 const Color kTeal = Color(0xFF0D9488);
 const Color kSlate900 = Color(0xFF0F172A);
@@ -52,6 +43,48 @@ const Color kEmeraldBg = Color(0xFFD1FAE5);
 const Color kRed = Color(0xFFDC2626);
 const Color kRedBg = Color(0xFFFEE2E2);
 const Color kWhite = Colors.white;
+
+// ===========================================================================
+//  GLOBAL SETTINGS STATE
+// ===========================================================================
+class AppSettings extends ChangeNotifier {
+  bool isDarkMode = false;
+  bool wifiOnly = true;
+  bool notifications = true;
+
+  void toggleDark(bool val) {
+    isDarkMode = val;
+    notifyListeners();
+  }
+
+  void toggleWifi(bool val) {
+    wifiOnly = val;
+    notifyListeners();
+  }
+
+  void toggleNotif(bool val) {
+    notifications = val;
+    notifyListeners();
+  }
+}
+
+final AppSettings appSettings = AppSettings();
+
+// Helper extension for dynamic colors based on theme mode
+extension ThemeColors on BuildContext {
+  bool get isDark => appSettings.isDarkMode;
+  Color get bg => isDark ? const Color(0xFF0F172A) : kSlate50;
+  Color get card => isDark ? const Color(0xFF1E293B) : kWhite;
+  Color get textMain => isDark ? const Color(0xFFF8FAFC) : kSlate900;
+  Color get textSec => isDark ? const Color(0xFF94A3B8) : kSlate500;
+  Color get border => isDark ? const Color(0xFF334155) : kSlate100;
+  Color get borderActive => isDark ? const Color(0xFF475569) : kSlate200;
+  Color get inputFill => isDark ? const Color(0xFF0F172A) : kSlate50;
+  Color get iconBg =>
+      isDark ? const Color(0xFF134E4A) : const Color(0xFFCCFBF1);
+  Color get iconColor => textMain;
+  Color get shadow => isDark ? Colors.black54 : const Color(0x18000000);
+}
 
 // ===========================================================================
 //  MODELS
@@ -210,7 +243,7 @@ class Question {
 }
 
 // ===========================================================================
-//  AUTH STATE  (ChangeNotifier – no extra packages)
+//  AUTH STATE
 // ===========================================================================
 
 class AuthState extends ChangeNotifier {
@@ -259,71 +292,8 @@ class AuthState extends ChangeNotifier {
 }
 
 // ===========================================================================
-//  THEME
-// ===========================================================================
-
-ThemeData _buildTheme() => ThemeData(
-      useMaterial3: true,
-      scaffoldBackgroundColor: kSlate50,
-      colorScheme: const ColorScheme.light(
-        primary: kTeal,
-        onPrimary: kWhite,
-        surface: kWhite,
-        onSurface: kSlate900,
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: kWhite,
-        foregroundColor: kSlate900,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: kSlate50,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: kSlate200),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: kSlate200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: kTeal, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: kRed),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: kRed, width: 2),
-        ),
-      ),
-    );
-
-// ===========================================================================
 //  ENTRY POINT
 // ===========================================================================
-
-// ─── ENTRY POINT ────────────────────────────────────────────────────────────
-// PART 1 FIX: async main() with WidgetsFlutterBinding + Firebase.initializeApp()
-// This matches the standard Flutter+Firebase pattern and works correctly on real
-// devices (google-services.json / GoogleService-Info.plist supply the config).
-// The _firebaseOptions const is kept above for web/desktop fallback but is NOT
-// passed here so the native config files are used on Android/iOS.
-
-Future<void> _testFirestoreConnection() async {
-  try {
-    await FirebaseFirestore.instance.collection('departments').limit(1).get();
-    print('Firestore connected successfully');
-  } catch (e) {
-    print('Firestore connection error: $e');
-  }
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -332,8 +302,6 @@ void main() async {
     debugPrint('Flutter error: ${details.exceptionAsString()}');
   };
   try {
-    // Try native config first (google-services.json on Android,
-    // GoogleService-Info.plist on iOS). Falls back to _firebaseOptions for web.
     await Firebase.initializeApp();
   } catch (_) {
     await Firebase.initializeApp(options: _firebaseOptions);
@@ -343,20 +311,12 @@ void main() async {
 
 class _SmAcademyRoot extends StatefulWidget {
   const _SmAcademyRoot();
-
   @override
   State<_SmAcademyRoot> createState() => _SmAcademyRootState();
 }
 
 class _SmAcademyRootState extends State<_SmAcademyRoot> {
   final AuthState _auth = AuthState();
-
-  @override
-  void initState() {
-    super.initState();
-    // Run connection test in background (debug only, does not affect UI).
-    _testFirestoreConnection();
-  }
 
   @override
   void dispose() {
@@ -366,29 +326,49 @@ class _SmAcademyRootState extends State<_SmAcademyRoot> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SM Academy',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      home: ListenableBuilder(
-        listenable: _auth,
-        builder: (_, __) {
-          // Auth state still loading → show splash.
-          if (_auth.loading) return const _SplashScreen();
-          // Not logged in → Login screen.
-          if (_auth.user == null) return _LoginScreen(auth: _auth);
-          // Logged in but Firestore profile not yet arrived.
-          if (_auth.profile == null) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(color: kTeal),
-              ),
-            );
-          }
-          // Fully loaded → Main app.
-          return _MainShell(auth: _auth);
-        },
-      ),
+    return ListenableBuilder(
+      listenable: Listenable.merge([_auth, appSettings]),
+      builder: (_, __) {
+        return MaterialApp(
+          title: 'SM Academy',
+          debugShowCheckedModeBanner: false,
+          themeMode: appSettings.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          theme: ThemeData(
+            useMaterial3: true,
+            scaffoldBackgroundColor: kSlate50,
+            colorScheme: const ColorScheme.light(
+              primary: kTeal,
+              onPrimary: kWhite,
+              surface: kWhite,
+              onSurface: kSlate900,
+            ),
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            scaffoldBackgroundColor: const Color(0xFF0F172A),
+            colorScheme: const ColorScheme.dark(
+              primary: kTeal,
+              onPrimary: kWhite,
+              surface: Color(0xFF1E293B),
+              onSurface: Color(0xFFF8FAFC),
+            ),
+          ),
+          home: _auth.loading
+              ? const _SplashScreen()
+              : (_auth.user == null
+                  ? _LoginScreen(auth: _auth)
+                  : (_auth.profile == null
+                      ? Scaffold(
+                          backgroundColor: appSettings.isDarkMode
+                              ? const Color(0xFF0F172A)
+                              : kSlate50,
+                          body: const Center(
+                            child: CircularProgressIndicator(color: kTeal),
+                          ),
+                        )
+                      : _MainShell(auth: _auth))),
+        );
+      },
     );
   }
 }
@@ -399,7 +379,6 @@ class _SmAcademyRootState extends State<_SmAcademyRoot> {
 
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -408,12 +387,12 @@ class _SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _AppLogo(size: 100, bgColor: kWhite),
+            _AppLogo(size: 100, bgColor: context.card),
             const SizedBox(height: 24),
             const Text(
               'SM ACADEMY',
               style: TextStyle(
-                color: kWhite,
+                color: Colors.white,
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 4,
@@ -421,9 +400,7 @@ class _SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 48),
             const CircularProgressIndicator(
-              color: kWhite,
-              strokeWidth: 2.5,
-            ),
+                color: Colors.white, strokeWidth: 2.5),
           ],
         ),
       ),
@@ -432,15 +409,13 @@ class _SplashScreen extends StatelessWidget {
 }
 
 // ===========================================================================
-//  SHARED WIDGETS & HELPERS
+//  SHARED WIDGETS
 // ===========================================================================
 
-/// App logo loaded from CDN, with a fallback icon.
 class _AppLogo extends StatelessWidget {
   final double size;
   final Color bgColor;
   const _AppLogo({this.size = 80, this.bgColor = kSlate50});
-
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -454,19 +429,15 @@ class _AppLogo extends StatelessWidget {
           width: size,
           height: size,
           color: bgColor,
-          child: Icon(
-            Icons.school_rounded,
-            size: size * 0.55,
-            color: kTeal,
-          ),
+          child: Icon(Icons.school_rounded, size: size * 0.55, color: kTeal),
         ),
       ),
     );
   }
 }
 
-/// A labelled text input with a leading icon.
-Widget _labeledField({
+Widget _labeledField(
+  BuildContext context, {
   required TextEditingController controller,
   required String label,
   required String hint,
@@ -480,10 +451,10 @@ Widget _labeledField({
     children: [
       Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: kSlate700,
+          color: context.textMain,
         ),
       ),
       const SizedBox(height: 6),
@@ -492,18 +463,33 @@ Widget _labeledField({
         obscureText: obscure,
         keyboardType: keyboardType,
         validator: validator,
-        style: const TextStyle(color: kSlate900),
+        style: TextStyle(color: context.textMain),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: kSlate400),
-          prefixIcon: Icon(icon, color: kSlate400, size: 20),
+          hintStyle: TextStyle(color: context.textSec),
+          prefixIcon: Icon(icon, color: context.textSec, size: 20),
+          filled: true,
+          fillColor: context.inputFill,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: context.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: context.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: kTeal, width: 2),
+          ),
         ),
       ),
     ],
   );
 }
 
-/// Red error banner displayed on auth screens.
 Widget _errorBanner(String message) => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -511,14 +497,11 @@ Widget _errorBanner(String message) => Container(
         border: Border.all(color: const Color(0xFFFFCDD2)),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        message,
-        style: const TextStyle(color: kRed, fontSize: 13),
-      ),
+      child: Text(message, style: const TextStyle(color: kRed, fontSize: 13)),
     );
 
-/// Thin divider used inside profile / settings cards.
-const Widget _kDivider = Divider(height: 1, color: kSlate100, indent: 16);
+Widget _kDivider(BuildContext context) =>
+    Divider(height: 1, color: context.border, indent: 16);
 
 // ===========================================================================
 //  LOGIN SCREEN
@@ -527,7 +510,6 @@ const Widget _kDivider = Divider(height: 1, color: kSlate100, indent: 16);
 class _LoginScreen extends StatefulWidget {
   final AuthState auth;
   const _LoginScreen({required this.auth});
-
   @override
   State<_LoginScreen> createState() => _LoginScreenState();
 }
@@ -538,27 +520,17 @@ class _LoginScreenState extends State<_LoginScreen> {
   bool _loading = false;
   String _error = '';
 
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
-  }
-
   Future<void> _login() async {
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text.trim();
     if (email.isEmpty || pass.isEmpty) return;
-
     setState(() {
       _loading = true;
       _error = '';
     });
-
     try {
       await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: pass);
-      // AuthState listener handles navigation automatically.
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message ?? 'Login failed. Please try again.');
     } finally {
@@ -569,7 +541,7 @@ class _LoginScreenState extends State<_LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kSlate50,
+      backgroundColor: context.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -579,55 +551,45 @@ class _LoginScreenState extends State<_LoginScreen> {
               child: Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: kWhite,
+                  color: context.card,
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x18000000),
+                      color: context.shadow,
                       blurRadius: 24,
-                      offset: Offset(0, 8),
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo & title
-                    const _AppLogo(size: 88),
+                    _AppLogo(size: 88, bgColor: context.bg),
                     const SizedBox(height: 12),
                     const Text(
                       'SM ACADEMY',
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: kTeal,
-                        letterSpacing: 3,
-                      ),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: kTeal,
+                          letterSpacing: 3),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Welcome Back',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: kSlate900,
-                      ),
-                    ),
+                    Text('Welcome Back',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: context.textMain)),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Sign in to continue your studies',
-                      style: TextStyle(fontSize: 14, color: kSlate500),
-                    ),
+                    Text('Sign in to continue your studies',
+                        style: TextStyle(fontSize: 14, color: context.textSec)),
                     const SizedBox(height: 28),
-
-                    // Error
-                    if (_error.isNotEmpty) ...<Widget>[
+                    if (_error.isNotEmpty) ...[
                       _errorBanner(_error),
                       const SizedBox(height: 16),
                     ],
-
-                    // Fields
                     _labeledField(
+                      context,
                       controller: _emailCtrl,
                       label: 'Email Address',
                       hint: 'student@university.edu',
@@ -636,6 +598,7 @@ class _LoginScreenState extends State<_LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     _labeledField(
+                      context,
                       controller: _passCtrl,
                       label: 'Password',
                       hint: '••••••••',
@@ -643,21 +606,16 @@ class _LoginScreenState extends State<_LoginScreen> {
                       obscure: true,
                     ),
                     const SizedBox(height: 24),
-
-                    // Sign-in button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _loading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kTeal,
-                          foregroundColor: kWhite,
-                          disabledBackgroundColor: kTeal,
-                          disabledForegroundColor: kWhite,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                              borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
                         child: _loading
@@ -665,44 +623,27 @@ class _LoginScreenState extends State<_LoginScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: kWhite,
-                                ),
-                              )
-                            : const Text(
-                                'Sign In',
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Text('Sign In',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                                    fontSize: 16, fontWeight: FontWeight.w800)),
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Register link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          "Don't have an account? ",
-                          style: TextStyle(color: kSlate500),
-                        ),
+                        Text("Don't have an account? ",
+                            style: TextStyle(color: context.textSec)),
                         GestureDetector(
-                          onTap: () => Navigator.push<void>(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  _RegisterScreen(auth: widget.auth),
-                            ),
-                          ),
-                          child: const Text(
-                            'Register Now',
-                            style: TextStyle(
-                              color: kTeal,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      _RegisterScreen(auth: widget.auth))),
+                          child: const Text('Register Now',
+                              style: TextStyle(
+                                  color: kTeal, fontWeight: FontWeight.w800)),
                         ),
                       ],
                     ),
@@ -724,7 +665,6 @@ class _LoginScreenState extends State<_LoginScreen> {
 class _RegisterScreen extends StatefulWidget {
   final AuthState auth;
   const _RegisterScreen({required this.auth});
-
   @override
   State<_RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -734,8 +674,8 @@ class _RegisterScreenState extends State<_RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  List<Department> _departments = <Department>[];
-  List<Stage> _stages = <Stage>[];
+  List<Department> _departments = [];
+  List<Stage> _stages = [];
   String? _selectedDeptId;
   String? _selectedStageId;
 
@@ -750,24 +690,11 @@ class _RegisterScreenState extends State<_RegisterScreen> {
     _fetchDepartments();
   }
 
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
-  }
-
-  // -- Firebase fetches ----------------------------------------------------
-
-  // PART 2 & 3 FIX: Department name = Document ID (e.g. "تمريض", "تخدير").
-  // Collection: "departments". DO NOT read any field called "name".
   Future<void> _fetchDepartments() async {
     try {
       final snap =
           await FirebaseFirestore.instance.collection('departments').get();
       setState(() {
-        // Use doc.id as both the id and display name per the Firebase structure.
         _departments =
             snap.docs.map((d) => Department(id: d.id, name: d.id)).toList();
       });
@@ -778,23 +705,19 @@ class _RegisterScreenState extends State<_RegisterScreen> {
     }
   }
 
-  // PART 3 FIX: Academic stages live at departments/{deptId}/years.
-  // Stage name = Document ID (e.g. "ثانية", "ثالثة"). DO NOT read any field.
   Future<void> _fetchStages(String deptId) async {
     setState(() {
       _fetchingStages = true;
-      _stages = <Stage>[];
+      _stages = [];
       _selectedStageId = null;
     });
     try {
       final snap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(deptId)
-          .collection(
-              'years') // correct subcollection name per Firebase structure
+          .collection('years')
           .get();
       setState(() {
-        // Use doc.id as both id and display name per the Firebase structure.
         _stages = snap.docs.map((d) => Stage(id: d.id, name: d.id)).toList();
       });
     } catch (e) {
@@ -803,8 +726,6 @@ class _RegisterScreenState extends State<_RegisterScreen> {
       if (mounted) setState(() => _fetchingStages = false);
     }
   }
-
-  // -- Registration --------------------------------------------------------
 
   Future<void> _register() async {
     if (_selectedDeptId == null || _selectedStageId == null) {
@@ -815,7 +736,6 @@ class _RegisterScreenState extends State<_RegisterScreen> {
       _loading = true;
       _error = '';
     });
-
     final dept = _departments.firstWhere((d) => d.id == _selectedDeptId);
     final stage = _stages.firstWhere((s) => s.id == _selectedStageId);
 
@@ -824,12 +744,10 @@ class _RegisterScreenState extends State<_RegisterScreen> {
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text.trim(),
       );
-
-      // Write user document – same structure as original web app.
       await FirebaseFirestore.instance
           .collection('users')
           .doc(cred.user!.uid)
-          .set(<String, dynamic>{
+          .set({
         'uid': cred.user!.uid,
         'name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
@@ -837,15 +755,14 @@ class _RegisterScreenState extends State<_RegisterScreen> {
         'departmentName': dept.name,
         'stageId': _selectedStageId,
         'stageName': stage.name,
-        'assignedSubjects': <dynamic>[],
-        'stats': <String, dynamic>{
+        'assignedSubjects': [],
+        'stats': {
           'totalQuestions': 0,
           'usedQuestions': 0,
-          'unusedQuestions': 0,
+          'unusedQuestions': 0
         },
         'createdAt': FieldValue.serverTimestamp(),
       });
-      // AuthState listener navigates automatically on success.
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message ?? 'Registration failed.');
     } catch (e) {
@@ -855,9 +772,8 @@ class _RegisterScreenState extends State<_RegisterScreen> {
     }
   }
 
-  // -- Dropdown helper -----------------------------------------------------
-
-  Widget _dropdown({
+  Widget _dropdown(
+    BuildContext context, {
     required String label,
     required IconData icon,
     required String? value,
@@ -869,24 +785,33 @@ class _RegisterScreenState extends State<_RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: kSlate700,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: context.textMain)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: value,
           onChanged: enabled ? onChanged : null,
           items: items,
           isExpanded: true,
+          dropdownColor: context.card,
+          style: TextStyle(color: context.textMain),
           borderRadius: BorderRadius.circular(16),
-          hint: Text(hint, style: const TextStyle(color: kSlate400)),
+          hint: Text(hint, style: TextStyle(color: context.textSec)),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: kSlate400, size: 20),
+            prefixIcon: Icon(icon, color: context.textSec, size: 20),
+            filled: true,
+            fillColor: context.inputFill,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: context.border)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: context.border)),
           ),
         ),
       ],
@@ -896,7 +821,7 @@ class _RegisterScreenState extends State<_RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kSlate50,
+      backgroundColor: context.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -906,117 +831,92 @@ class _RegisterScreenState extends State<_RegisterScreen> {
               child: Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: kWhite,
+                  color: context.card,
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x18000000),
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
+                        color: context.shadow,
+                        blurRadius: 24,
+                        offset: const Offset(0, 8))
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo & title
-                    const _AppLogo(size: 80),
+                    _AppLogo(size: 80, bgColor: context.bg),
                     const SizedBox(height: 12),
-                    const Text(
-                      'SM ACADEMY',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: kTeal,
-                        letterSpacing: 3,
-                      ),
-                    ),
+                    const Text('SM ACADEMY',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: kTeal,
+                            letterSpacing: 3)),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Create Account',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: kSlate900,
-                      ),
-                    ),
+                    Text('Create Account',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: context.textMain)),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Join our medical learning community',
-                      style: TextStyle(fontSize: 14, color: kSlate500),
-                    ),
+                    Text('Join our medical learning community',
+                        style: TextStyle(fontSize: 14, color: context.textSec)),
                     const SizedBox(height: 28),
-
-                    // Error
-                    if (_error.isNotEmpty) ...<Widget>[
+                    if (_error.isNotEmpty) ...[
                       _errorBanner(_error),
                       const SizedBox(height: 16),
                     ],
-
-                    // Fields
-                    _labeledField(
-                      controller: _nameCtrl,
-                      label: 'Full Name',
-                      hint: 'John Doe',
-                      icon: Icons.person_outline_rounded,
-                    ),
+                    _labeledField(context,
+                        controller: _nameCtrl,
+                        label: 'Full Name',
+                        hint: 'John Doe',
+                        icon: Icons.person_outline_rounded),
                     const SizedBox(height: 14),
-                    _labeledField(
-                      controller: _emailCtrl,
-                      label: 'Email Address',
-                      hint: 'john@med.edu',
-                      icon: Icons.mail_outline_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
+                    _labeledField(context,
+                        controller: _emailCtrl,
+                        label: 'Email Address',
+                        hint: 'john@med.edu',
+                        icon: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress),
                     const SizedBox(height: 14),
-                    _labeledField(
-                      controller: _passCtrl,
-                      label: 'Password',
-                      hint: '••••••••',
-                      icon: Icons.lock_outline_rounded,
-                      obscure: true,
-                    ),
+                    _labeledField(context,
+                        controller: _passCtrl,
+                        label: 'Password',
+                        hint: '••••••••',
+                        icon: Icons.lock_outline_rounded,
+                        obscure: true),
                     const SizedBox(height: 14),
-
-                    // Department – fetched dynamically from Firebase
                     _fetchingDepts
                         ? const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             child: Center(
-                              child: CircularProgressIndicator(color: kTeal),
-                            ),
-                          )
+                                child: CircularProgressIndicator(color: kTeal)))
                         : _dropdown(
+                            context,
                             label: 'Department',
                             icon: Icons.business_outlined,
                             value: _selectedDeptId,
                             hint: 'Select Department',
                             items: _departments
                                 .map((d) => DropdownMenuItem<String>(
-                                      value: d.id,
-                                      child: Text(d.name),
-                                    ))
+                                    value: d.id, child: Text(d.name)))
                                 .toList(),
                             onChanged: (val) {
                               setState(() {
                                 _selectedDeptId = val;
                                 _selectedStageId = null;
-                                _stages = <Stage>[];
+                                _stages = [];
                               });
                               if (val != null) _fetchStages(val);
                             },
                           ),
                     const SizedBox(height: 14),
-
-                    // Academic Stage – fetched dynamically from Firebase
                     _fetchingStages
                         ? const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             child: Center(
-                              child: CircularProgressIndicator(color: kTeal),
-                            ),
-                          )
+                                child: CircularProgressIndicator(color: kTeal)))
                         : _dropdown(
+                            context,
                             label: 'Academic Stage',
                             icon: Icons.school_outlined,
                             value: _selectedStageId,
@@ -1026,16 +926,12 @@ class _RegisterScreenState extends State<_RegisterScreen> {
                             enabled: _selectedDeptId != null,
                             items: _stages
                                 .map((s) => DropdownMenuItem<String>(
-                                      value: s.id,
-                                      child: Text(s.name),
-                                    ))
+                                    value: s.id, child: Text(s.name)))
                                 .toList(),
                             onChanged: (val) =>
                                 setState(() => _selectedStageId = val),
                           ),
                     const SizedBox(height: 24),
-
-                    // Submit
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -1043,13 +939,10 @@ class _RegisterScreenState extends State<_RegisterScreen> {
                             (_loading || _fetchingDepts) ? null : _register,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kEmerald,
-                          foregroundColor: kWhite,
-                          disabledBackgroundColor: kEmerald,
-                          disabledForegroundColor: kWhite,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                              borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
                         child: _loading
@@ -1057,38 +950,24 @@ class _RegisterScreenState extends State<_RegisterScreen> {
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: kWhite,
-                                ),
-                              )
-                            : const Text(
-                                'Complete Registration',
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Text('Complete Registration',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                                    fontSize: 16, fontWeight: FontWeight.w800)),
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Login link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Already have an account? ',
-                          style: TextStyle(color: kSlate500),
-                        ),
+                        Text('Already have an account? ',
+                            style: TextStyle(color: context.textSec)),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: const Text(
-                            'Sign In',
-                            style: TextStyle(
-                              color: kEmerald,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                          child: const Text('Sign In',
+                              style: TextStyle(
+                                  color: kEmerald,
+                                  fontWeight: FontWeight.w800)),
                         ),
                       ],
                     ),
@@ -1104,13 +983,12 @@ class _RegisterScreenState extends State<_RegisterScreen> {
 }
 
 // ===========================================================================
-//  MAIN SHELL  (bottom-nav container)
+//  MAIN SHELL
 // ===========================================================================
 
 class _MainShell extends StatefulWidget {
   final AuthState auth;
   const _MainShell({required this.auth});
-
   @override
   State<_MainShell> createState() => _MainShellState();
 }
@@ -1122,7 +1000,7 @@ class _MainShellState extends State<_MainShell> {
   @override
   void initState() {
     super.initState();
-    _pages = <Widget>[
+    _pages = [
       _HomePage(auth: widget.auth),
       _CategoriesPage(auth: widget.auth),
       _BookmarksPage(auth: widget.auth),
@@ -1133,12 +1011,12 @@ class _MainShellState extends State<_MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kSlate50,
+      backgroundColor: context.bg,
       body: IndexedStack(index: _tab, children: _pages),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: kWhite,
-          border: Border(top: BorderSide(color: kSlate100)),
+        decoration: BoxDecoration(
+          color: context.card,
+          border: Border(top: BorderSide(color: context.border)),
         ),
         child: SafeArea(
           top: false,
@@ -1147,34 +1025,28 @@ class _MainShellState extends State<_MainShell> {
             onTap: (i) => setState(() => _tab = i),
             type: BottomNavigationBarType.fixed,
             selectedItemColor: kTeal,
-            unselectedItemColor: kSlate400,
-            backgroundColor: kWhite,
+            unselectedItemColor: context.textSec,
+            backgroundColor: context.card,
             elevation: 0,
-            selectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
-            ),
-            items: const <BottomNavigationBarItem>[
+            selectedLabelStyle:
+                const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+            items: const [
               BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home_rounded),
+                  label: 'Home'),
               BottomNavigationBarItem(
-                icon: Icon(Icons.book_outlined),
-                activeIcon: Icon(Icons.book_rounded),
-                label: 'Subjects',
-              ),
+                  icon: Icon(Icons.book_outlined),
+                  activeIcon: Icon(Icons.book_rounded),
+                  label: 'Subjects'),
               BottomNavigationBarItem(
-                icon: Icon(Icons.bookmark_border_rounded),
-                activeIcon: Icon(Icons.bookmark_rounded),
-                label: 'Bookmarks',
-              ),
+                  icon: Icon(Icons.bookmark_border_rounded),
+                  activeIcon: Icon(Icons.bookmark_rounded),
+                  label: 'Bookmarks'),
               BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline_rounded),
-                activeIcon: Icon(Icons.person_rounded),
-                label: 'Profile',
-              ),
+                  icon: Icon(Icons.person_outline_rounded),
+                  activeIcon: Icon(Icons.person_rounded),
+                  label: 'Profile'),
             ],
           ),
         ),
@@ -1184,94 +1056,142 @@ class _MainShellState extends State<_MainShell> {
 }
 
 // ===========================================================================
-//  HOME PAGE
+//  HOME PAGE (UPDATED ACCURATE STATS)
 // ===========================================================================
 
-class _HomePage extends StatelessWidget {
+class _HomePage extends StatefulWidget {
   final AuthState auth;
   const _HomePage({required this.auth});
+  @override
+  State<_HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<_HomePage> {
+  bool _loadingStats = true;
+  int _totalSubjects = 0;
+  int _totalAvailableQuestions = 0;
+  int _attemptedQuestions = 0;
+  int _correctAnswers = 0;
+  int _incorrectAnswers = 0;
+  int _truePercentage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAccurateStats();
+  }
+
+  Future<void> _loadAccurateStats() async {
+    final uid = widget.auth.user?.uid;
+    final profile = widget.auth.profile;
+    if (uid == null || profile == null) return;
+
+    try {
+      _totalSubjects = profile.assignedSubjects.length;
+
+      // 1. Fetch attempted and correct counts
+      final progSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('progress')
+          .get();
+      _attemptedQuestions = progSnap.docs.length;
+      _correctAnswers =
+          progSnap.docs.where((d) => d.data()['isCorrect'] == true).length;
+      _incorrectAnswers = _attemptedQuestions - _correctAnswers;
+
+      // 2. Aggregate total questions available across all assigned subjects
+      int tq = 0;
+      for (var sub in profile.assignedSubjects) {
+        final lecSnap = await FirebaseFirestore.instance
+            .collection('departments')
+            .doc(sub.departmentId)
+            .collection('years')
+            .doc(sub.stageId)
+            .collection('subjects')
+            .doc(sub.subjectId)
+            .collection('lectures')
+            .get();
+
+        for (var lec in lecSnap.docs) {
+          try {
+            final qCount =
+                await lec.reference.collection('questions').count().get();
+            tq += qCount.count ?? 0;
+          } catch (_) {}
+        }
+      }
+      _totalAvailableQuestions = tq;
+      if (_totalAvailableQuestions > 0) {
+        _truePercentage =
+            ((_attemptedQuestions / _totalAvailableQuestions) * 100).round();
+      } else {
+        _truePercentage = 0;
+      }
+    } catch (e) {
+      debugPrint('Stats Error: $e');
+    } finally {
+      if (mounted) setState(() => _loadingStats = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final profile = auth.profile;
+    final profile = widget.auth.profile;
     if (profile == null) return const SizedBox.shrink();
 
-    final stats = profile.stats;
-
-    // Guard against negative values.
-    final int displayUsed = stats.usedQuestions < 0 ? 0 : stats.usedQuestions;
-    final int displayUnused =
-        stats.unusedQuestions < 0 ? 0 : stats.unusedQuestions;
-    final int displayTotal =
-        (displayUsed + displayUnused) > stats.totalQuestions
-            ? displayUsed + displayUnused
-            : stats.totalQuestions;
-    final int pct =
-        displayTotal > 0 ? ((displayUsed / displayTotal) * 100).round() : 0;
-    final double progress = displayTotal > 0 ? displayUsed / displayTotal : 0.0;
+    final double progressVal = _totalAvailableQuestions > 0
+        ? (_attemptedQuestions / _totalAvailableQuestions)
+        : 0.0;
 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // Header
+          children: [
             Text(
               'Welcome, ${profile.name}',
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: kSlate900,
-              ),
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: context.textMain),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Track your progress and keep learning.',
-              style: TextStyle(color: kSlate500, fontSize: 14),
-            ),
+            Text('Track your progress and keep learning.',
+                style: TextStyle(color: context.textSec, fontSize: 14)),
             const SizedBox(height: 24),
-
-            // Progress card
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: kWhite,
+                color: context.card,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: kSlate100),
-                boxShadow: const <BoxShadow>[
+                border: Border.all(color: context.border),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
+                      color: context.shadow,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4))
                 ],
               ),
               child: Column(
-                children: <Widget>[
+                children: [
                   Row(
-                    children: <Widget>[
+                    children: [
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFCCFBF1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.trending_up_rounded,
-                          color: kTeal,
-                          size: 20,
-                        ),
+                            color: context.iconBg,
+                            borderRadius: BorderRadius.circular(10)),
+                        child: Icon(Icons.trending_up_rounded,
+                            color: context.iconColor, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Overall Progress',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: kSlate900,
-                        ),
-                      ),
+                      Text('Overall Progress',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: context.textMain)),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -1279,14 +1199,14 @@ class _HomePage extends StatelessWidget {
                     height: 160,
                     child: Stack(
                       alignment: Alignment.center,
-                      children: <Widget>[
+                      children: [
                         SizedBox(
                           width: 160,
                           height: 160,
                           child: CircularProgressIndicator(
-                            value: progress,
+                            value: progressVal,
                             strokeWidth: 14,
-                            backgroundColor: kSlate200,
+                            backgroundColor: context.borderActive,
                             valueColor:
                                 const AlwaysStoppedAnimation<Color>(kTeal),
                             strokeCap: StrokeCap.round,
@@ -1294,23 +1214,21 @@ class _HomePage extends StatelessWidget {
                         ),
                         Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
+                          children: [
                             Text(
-                              '$pct%',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900,
-                                color: kSlate900,
-                              ),
+                              '$_truePercentage%',
+                              style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: context.textMain),
                             ),
-                            const Text(
+                            Text(
                               'COMPLETED',
                               style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: kSlate400,
-                                letterSpacing: 1,
-                              ),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.textSec,
+                                  letterSpacing: 1),
                             ),
                           ],
                         ),
@@ -1319,200 +1237,150 @@ class _HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "You've completed $displayUsed out of $displayTotal questions. "
-                    'Keep going to master your curriculum!',
-                    style: const TextStyle(
-                      color: kSlate500,
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
+                    "You've completed $_attemptedQuestions out of $_totalAvailableQuestions questions. Keep going!",
+                    style: TextStyle(
+                        color: context.textSec, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      _legendDot(kTeal, 'Used'),
-                      const SizedBox(width: 20),
-                      _legendDot(kSlate200, 'Unused'),
-                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-
-            // Stat cards
-            _statCard(
-              icon: Icons.menu_book_rounded,
-              label: 'Total Questions',
-              value: displayTotal,
-              desc: 'Available in your curriculum',
-              cardColor: const Color(0xFFEFF6FF),
-              iconColor: const Color(0xFF2563EB),
-            ),
-            const SizedBox(height: 12),
-            _statCard(
-              icon: Icons.check_circle_outline_rounded,
-              label: 'Used Questions',
-              value: displayUsed,
-              desc: 'Questions you have attempted',
-              cardColor: const Color(0xFFCCFBF1),
-              iconColor: kTeal,
-            ),
-            const SizedBox(height: 12),
-            _statCard(
-              icon: Icons.circle_outlined,
-              label: 'Unused Questions',
-              value: displayUnused,
-              desc: 'Remaining practice material',
-              cardColor: kSlate50,
-              iconColor: kSlate500,
-            ),
-            const SizedBox(height: 28),
-
-            // Recent activity
-            const Text(
-              'Recent Activity',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: kSlate900,
+            if (_loadingStats)
+              const Center(
+                  child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(color: kTeal)))
+            else
+              GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _statCard(
+                      icon: Icons.library_books,
+                      label: 'Assigned Subjects',
+                      value: '$_totalSubjects',
+                      color: const Color(0xFF3B82F6),
+                      bgColor: context.isDark
+                          ? const Color(0xFF1E3A8A)
+                          : const Color(0xFFEFF6FF)),
+                  _statCard(
+                      icon: Icons.format_list_numbered,
+                      label: 'Total Questions',
+                      value: '$_totalAvailableQuestions',
+                      color: const Color(0xFF8B5CF6),
+                      bgColor: context.isDark
+                          ? const Color(0xFF4C1D95)
+                          : const Color(0xFFF5F3FF)),
+                  _statCard(
+                      icon: Icons.edit_note,
+                      label: 'Attempted',
+                      value: '$_attemptedQuestions',
+                      color: const Color(0xFFF59E0B),
+                      bgColor: context.isDark
+                          ? const Color(0xFF78350F)
+                          : const Color(0xFFFFFBEB)),
+                  _statCard(
+                      icon: Icons.check_circle_outline_rounded,
+                      label: 'Correct',
+                      value: '$_correctAnswers',
+                      color: kEmerald,
+                      bgColor: context.isDark
+                          ? const Color(0xFF064E3B)
+                          : const Color(0xFFECFDF5)),
+                  _statCard(
+                      icon: Icons.cancel_outlined,
+                      label: 'Incorrect',
+                      value: '$_incorrectAnswers',
+                      color: kRed,
+                      bgColor: context.isDark
+                          ? const Color(0xFF7F1D1D)
+                          : const Color(0xFFFEF2F2)),
+                  _statCard(
+                      icon: Icons.percent_rounded,
+                      label: 'True Score',
+                      value: '$_truePercentage%',
+                      color: kTeal,
+                      bgColor: context.isDark
+                          ? const Color(0xFF134E4A)
+                          : const Color(0xFFF0FDFA)),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: kWhite,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: kSlate200),
-              ),
-              child: const Center(
-                child: Text(
-                  'No recent activity found.\n'
-                  'Start a quiz to see your progress here!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: kSlate400,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _legendDot(Color color, String label) => Row(
-        children: <Widget>[
+  Widget _statCard(
+      {required IconData icon,
+      required String label,
+      required String value,
+      required Color color,
+      required Color bgColor}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.border),
+        boxShadow: [
+          BoxShadow(
+              color: context.shadow, blurRadius: 8, offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
           Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+                color: bgColor, borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 6),
+          const Spacer(),
+          Text(
+            value,
+            style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: context.textMain,
+                height: 1.2),
+          ),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: kSlate600,
-            ),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: context.textSec),
           ),
         ],
-      );
-
-  Widget _statCard({
-    required IconData icon,
-    required String label,
-    required int value,
-    required String desc,
-    required Color cardColor,
-    required Color iconColor,
-  }) =>
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: kWhite,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kSlate100),
-          boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: kSlate400,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Text(
-                    '$value',
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: kSlate900,
-                      height: 1.2,
-                    ),
-                  ),
-                  Text(
-                    desc,
-                    style: const TextStyle(fontSize: 11, color: kSlate400),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+      ),
+    );
+  }
 }
 
 // ===========================================================================
-//  CATEGORIES PAGE  (assigned subjects)
+//  CATEGORIES PAGE
 // ===========================================================================
 
 class _CategoriesPage extends StatefulWidget {
   final AuthState auth;
   const _CategoriesPage({required this.auth});
-
   @override
   State<_CategoriesPage> createState() => _CategoriesPageState();
 }
 
 class _CategoriesPageState extends State<_CategoriesPage> {
   String _search = '';
-
   @override
   Widget build(BuildContext context) {
     final profile = widget.auth.profile;
     if (profile == null) return const SizedBox.shrink();
-
     final subjects = profile.assignedSubjects;
     final filtered = subjects
         .where(
@@ -1524,28 +1392,29 @@ class _CategoriesPageState extends State<_CategoriesPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Subjects',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: kSlate900,
-              ),
-            ),
+          children: [
+            Text('Subjects',
+                style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: context.textMain)),
             const SizedBox(height: 4),
-            const Text(
-              'Select a subject to view lectures.',
-              style: TextStyle(color: kSlate500, fontSize: 14),
-            ),
+            Text('Select a subject to view lectures.',
+                style: TextStyle(color: context.textSec, fontSize: 14)),
             const SizedBox(height: 16),
             TextField(
               onChanged: (v) => setState(() => _search = v),
-              decoration: const InputDecoration(
+              style: TextStyle(color: context.textMain),
+              decoration: InputDecoration(
                 hintText: 'Search subjects...',
-                hintStyle: TextStyle(color: kSlate400),
-                prefixIcon: Icon(Icons.search_rounded, color: kSlate400),
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
+                hintStyle: TextStyle(color: context.textSec),
+                prefixIcon: Icon(Icons.search_rounded, color: context.textSec),
+                fillColor: context.inputFill,
+                filled: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 20),
@@ -1563,9 +1432,9 @@ class _CategoriesPageState extends State<_CategoriesPage> {
                             final s = filtered[i];
                             return _SubjectCard(
                               subject: s,
-                              onTap: () => Navigator.push<void>(
+                              onTap: () => Navigator.push(
                                 ctx,
-                                MaterialPageRoute<void>(
+                                MaterialPageRoute(
                                   builder: (_) => _LecturesPage(
                                     subjectId: s.subjectId,
                                     departmentId: s.departmentId,
@@ -1588,23 +1457,19 @@ class _CategoriesPageState extends State<_CategoriesPage> {
   Widget _emptyState(String msg) => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
+          children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: kSlate50,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(
+                  color: context.inputFill, shape: BoxShape.circle),
               child:
-                  const Icon(Icons.book_outlined, size: 36, color: kSlate400),
+                  Icon(Icons.book_outlined, size: 36, color: context.textSec),
             ),
             const SizedBox(height: 16),
-            Text(
-              msg,
-              textAlign: TextAlign.center,
-              style:
-                  const TextStyle(color: kSlate500, fontSize: 14, height: 1.5),
-            ),
+            Text(msg,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: context.textSec, fontSize: 14, height: 1.5)),
           ],
         ),
       );
@@ -1614,7 +1479,6 @@ class _SubjectCard extends StatelessWidget {
   final AssignedSubject subject;
   final VoidCallback onTap;
   const _SubjectCard({required this.subject, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -1622,54 +1486,47 @@ class _SubjectCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kWhite,
+          color: context.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kSlate100),
-          boxShadow: const <BoxShadow>[
+          border: Border.all(color: context.border),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
+                color: context.shadow,
+                blurRadius: 8,
+                offset: const Offset(0, 2))
           ],
         ),
         child: Row(
-          children: <Widget>[
+          children: [
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFFCCFBF1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Icons.book_rounded, color: kTeal, size: 24),
+                  color: context.iconBg,
+                  borderRadius: BorderRadius.circular(14)),
+              child:
+                  Icon(Icons.book_rounded, color: context.iconColor, size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    subject.subjectName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: kSlate900,
-                    ),
-                  ),
-                  const Text(
-                    'MEDICAL SUBJECT',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: kSlate400,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                children: [
+                  Text(subject.subjectName,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: context.textMain)),
+                  Text('MEDICAL SUBJECT',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: context.textSec,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: kSlate400),
+            Icon(Icons.chevron_right_rounded, color: context.textSec),
           ],
         ),
       ),
@@ -1688,20 +1545,19 @@ class _LecturesPage extends StatefulWidget {
   final String subjectName;
   final AuthState auth;
 
-  const _LecturesPage({
-    required this.subjectId,
-    required this.departmentId,
-    required this.stageId,
-    required this.subjectName,
-    required this.auth,
-  });
+  const _LecturesPage(
+      {required this.subjectId,
+      required this.departmentId,
+      required this.stageId,
+      required this.subjectName,
+      required this.auth});
 
   @override
   State<_LecturesPage> createState() => _LecturesPageState();
 }
 
 class _LecturesPageState extends State<_LecturesPage> {
-  List<Lecture> _lectures = <Lecture>[];
+  List<Lecture> _lectures = [];
   bool _loading = true;
 
   @override
@@ -1711,11 +1567,11 @@ class _LecturesPageState extends State<_LecturesPage> {
   }
 
   Future<void> _fetchLectures() async {
-    // Path: departments/{deptId}/stages/{stageId}/subjects/{subjectId}/lectures
+    // UPDATED PATH: departments/{deptId}/years/{stageId}/subjects/{subjectId}/lectures
     final ref = FirebaseFirestore.instance
         .collection('departments')
         .doc(widget.departmentId)
-        .collection('stages')
+        .collection('years')
         .doc(widget.stageId)
         .collection('subjects')
         .doc(widget.subjectId)
@@ -1728,21 +1584,16 @@ class _LecturesPageState extends State<_LecturesPage> {
       } catch (_) {
         snap = await ref.get();
       }
-
       final list = snap.docs.map((d) {
         final data = d.data() as Map<String, dynamic>;
         return Lecture(
-          id: d.id,
-          name: (data['name'] as String?) ?? d.id,
-          order: ((data['order'] as num?) ?? 999999).toInt(),
-        );
+            id: d.id,
+            name: (data['name'] as String?) ?? d.id,
+            order: ((data['order'] as num?) ?? 999999).toInt());
       }).toList();
-
-      list.sort((a, b) {
-        final cmp = a.order.compareTo(b.order);
-        return cmp != 0 ? cmp : a.name.compareTo(b.name);
-      });
-
+      list.sort((a, b) => a.order.compareTo(b.order) != 0
+          ? a.order.compareTo(b.order)
+          : a.name.compareTo(b.name));
       setState(() => _lectures = list);
     } catch (e) {
       debugPrint('Lectures fetch error: $e');
@@ -1754,11 +1605,12 @@ class _LecturesPageState extends State<_LecturesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: context.bg,
       appBar: AppBar(
-        title: Text(
-          widget.subjectName,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
+        backgroundColor: context.card,
+        foregroundColor: context.textMain,
+        title: Text(widget.subjectName,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
         leading: BackButton(onPressed: () => Navigator.pop(context)),
       ),
       body: _loading
@@ -1785,25 +1637,18 @@ class _LecturesPageState extends State<_LecturesPage> {
           padding: const EdgeInsets.all(40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
+            children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: kSlate50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.book_outlined,
-                  size: 36,
-                  color: kSlate400,
-                ),
+                decoration: BoxDecoration(
+                    color: context.inputFill, shape: BoxShape.circle),
+                child:
+                    Icon(Icons.book_outlined, size: 36, color: context.textSec),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'No lectures available for this subject yet.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: kSlate500, fontSize: 14),
-              ),
+              Text('No lectures available for this subject yet.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.textSec, fontSize: 14)),
             ],
           ),
         ),
@@ -1817,20 +1662,19 @@ class _LectureCard extends StatelessWidget {
   final String stageId;
   final AuthState auth;
 
-  const _LectureCard({
-    required this.lecture,
-    required this.subjectId,
-    required this.departmentId,
-    required this.stageId,
-    required this.auth,
-  });
+  const _LectureCard(
+      {required this.lecture,
+      required this.subjectId,
+      required this.departmentId,
+      required this.stageId,
+      required this.auth});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push<void>(
+      onTap: () => Navigator.push(
         context,
-        MaterialPageRoute<void>(
+        MaterialPageRoute(
           builder: (_) => _QuizPage(
             lectureId: lecture.id,
             lectureName: lecture.name,
@@ -1844,53 +1688,41 @@ class _LectureCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kWhite,
+          color: context.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kSlate100),
-          boxShadow: const <BoxShadow>[
+          border: Border.all(color: context.border),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
+                color: context.shadow,
+                blurRadius: 8,
+                offset: const Offset(0, 2))
           ],
         ),
         child: Row(
-          children: <Widget>[
+          children: [
             Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFCCFBF1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.play_circle_outline_rounded,
-                color: kTeal,
-                size: 24,
-              ),
+                  color: context.iconBg,
+                  borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.play_circle_outline_rounded,
+                  color: context.iconColor, size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                lecture.name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: kSlate900,
-                ),
-              ),
-            ),
-            const Text(
-              'Start Quiz',
-              style: TextStyle(
-                fontSize: 11,
-                color: kSlate400,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+                child: Text(lecture.name,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: context.textMain))),
+            Text('Start Quiz',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: context.textSec,
+                    fontWeight: FontWeight.w700)),
             const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded, color: kSlate400),
+            Icon(Icons.chevron_right_rounded, color: context.textSec),
           ],
         ),
       ),
@@ -1916,32 +1748,27 @@ class _QuizPage extends StatefulWidget {
   final String stageId;
   final AuthState auth;
 
-  const _QuizPage({
-    required this.lectureId,
-    required this.lectureName,
-    required this.subjectId,
-    required this.departmentId,
-    required this.stageId,
-    required this.auth,
-  });
-
+  const _QuizPage(
+      {required this.lectureId,
+      required this.lectureName,
+      required this.subjectId,
+      required this.departmentId,
+      required this.stageId,
+      required this.auth});
   @override
   State<_QuizPage> createState() => _QuizPageState();
 }
 
 class _QuizPageState extends State<_QuizPage> {
-  List<Question> _questions = <Question>[];
+  List<Question> _questions = [];
   bool _loading = true;
   int _index = 0;
-  final Map<String, _QProgress> _progress = <String, _QProgress>{};
-  final Map<String, bool> _bookmarked = <String, bool>{};
-  // IDs of options whose explanation panels are currently open.
-  final Set<String> _expanded = <String>{};
+  final Map<String, _QProgress> _progress = {};
+  final Map<String, bool> _bookmarked = {};
+  final Set<String> _expanded = {};
   bool _showSidebar = false;
   bool _showSummary = false;
   double _textSize = 18;
-
-  // -- Data fetching --------------------------------------------------------
 
   @override
   void initState() {
@@ -1952,14 +1779,12 @@ class _QuizPageState extends State<_QuizPage> {
   Future<void> _fetchAll() async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
-
     try {
-      // Questions path:
-      // departments/{deptId}/stages/{stageId}/subjects/{subjectId}/lectures/{lectureId}/questions
+      // UPDATED PATH
       final qSnap = await FirebaseFirestore.instance
           .collection('departments')
           .doc(widget.departmentId)
-          .collection('stages')
+          .collection('years')
           .doc(widget.stageId)
           .collection('subjects')
           .doc(widget.subjectId)
@@ -1968,11 +1793,9 @@ class _QuizPageState extends State<_QuizPage> {
           .collection('questions')
           .get();
 
-      final questions =
+      _questions =
           qSnap.docs.map((d) => Question.fromMap(d.id, d.data())).toList();
-      setState(() => _questions = questions);
 
-      // users/{uid}/progress
       final pSnap = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -1981,12 +1804,10 @@ class _QuizPageState extends State<_QuizPage> {
       for (final d in pSnap.docs) {
         final data = d.data();
         _progress[d.id] = _QProgress(
-          selectedOptionId: data['selectedOptionId'] as String?,
-          isCorrect: data['isCorrect'] == true,
-        );
+            selectedOptionId: data['selectedOptionId'] as String?,
+            isCorrect: data['isCorrect'] == true);
       }
 
-      // bookmarks where userId == uid
       final bSnap = await FirebaseFirestore.instance
           .collection('bookmarks')
           .where('userId', isEqualTo: uid)
@@ -2002,13 +1823,8 @@ class _QuizPageState extends State<_QuizPage> {
     }
   }
 
-  // -- Answer handling ------------------------------------------------------
-
   Future<void> _saveAnswer(
-    String questionId,
-    String optionId,
-    bool isCorrect,
-  ) async {
+      String questionId, String optionId, bool isCorrect) async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
     try {
@@ -2017,29 +1833,20 @@ class _QuizPageState extends State<_QuizPage> {
           .doc(uid)
           .collection('progress')
           .doc(questionId)
-          .set(<String, dynamic>{
+          .set({
         'questionId': questionId,
         'lectureId': widget.lectureId,
         'selectedOptionId': optionId,
         'isCorrect': isCorrect,
         'timestamp': FieldValue.serverTimestamp(),
       });
+      setState(() => _progress[questionId] =
+          _QProgress(selectedOptionId: optionId, isCorrect: isCorrect));
 
-      setState(() {
-        _progress[questionId] =
-            _QProgress(selectedOptionId: optionId, isCorrect: isCorrect);
-      });
-
-      // Update user stats
-      final unusedCount = widget.auth.profile?.stats.unusedQuestions ?? 0;
+      // Update basic profile stats locally if needed for non-dashboard logic
       final updates = <String, dynamic>{
-        'stats.usedQuestions': FieldValue.increment(1),
+        'stats.usedQuestions': FieldValue.increment(1)
       };
-      if (unusedCount > 0) {
-        updates['stats.unusedQuestions'] = FieldValue.increment(-1);
-      } else {
-        updates['stats.totalQuestions'] = FieldValue.increment(1);
-      }
       await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -2052,23 +1859,17 @@ class _QuizPageState extends State<_QuizPage> {
   void _handleOptionTap(String optionId, bool isCorrect) {
     final q = _questions[_index];
     final qp = _progress[q.id];
-
     if (qp == null) {
-      // First time answering this question
       _saveAnswer(q.id, optionId, isCorrect);
-      setState(() {
-        _expanded
-          ..clear()
-          ..add(optionId);
-      });
+      setState(() => _expanded
+        ..clear()
+        ..add(optionId));
     } else {
-      // Already answered – toggle the explanation for this option
       setState(() {
-        if (_expanded.contains(optionId)) {
+        if (_expanded.contains(optionId))
           _expanded.remove(optionId);
-        } else {
+        else
           _expanded.add(optionId);
-        }
       });
     }
   }
@@ -2078,11 +1879,9 @@ class _QuizPageState extends State<_QuizPage> {
     for (final opt in q.options) {
       if (opt.isCorrect) {
         _saveAnswer(q.id, opt.id, true);
-        setState(() {
-          _expanded
-            ..clear()
-            ..add(opt.id);
-        });
+        setState(() => _expanded
+          ..clear()
+          ..add(opt.id));
         break;
       }
     }
@@ -2095,16 +1894,12 @@ class _QuizPageState extends State<_QuizPage> {
     });
   }
 
-  // PART 5 FIX: Save/delete bookmarks using the exact Firebase field names.
-  // "userId", "questionId", "questionPath", "AddedAt" (capital A).
-  // Delete by querying userId + questionId so any auto-ID'd doc is found.
   Future<void> _toggleBookmark(String questionId) async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
     final bookmarksRef = FirebaseFirestore.instance.collection('bookmarks');
     try {
       if (_bookmarked[questionId] == true) {
-        // Query for all matching bookmark docs and delete each one.
         final existingDocs = await bookmarksRef
             .where('userId', isEqualTo: uid)
             .where('questionId', isEqualTo: questionId)
@@ -2114,13 +1909,10 @@ class _QuizPageState extends State<_QuizPage> {
         }
         setState(() => _bookmarked[questionId] = false);
       } else {
-        // PART 5 FIX: Save bookmark using add() so Firestore auto-generates the ID.
-        // Field names match exactly what is in Firebase: "AddedAt" (capital A).
+        // UPDATED PATH
         final questionPath =
-            'departments/${widget.departmentId}/stages/${widget.stageId}'
-            '/subjects/${widget.subjectId}/lectures/${widget.lectureId}'
-            '/questions/$questionId';
-        await bookmarksRef.add(<String, dynamic>{
+            'departments/${widget.departmentId}/years/${widget.stageId}/subjects/${widget.subjectId}/lectures/${widget.lectureId}/questions/$questionId';
+        await bookmarksRef.add({
           'AddedAt': FieldValue.serverTimestamp(),
           'questionId': questionId,
           'questionPath': questionPath,
@@ -2133,91 +1925,80 @@ class _QuizPageState extends State<_QuizPage> {
     }
   }
 
-  // -- Computed values ------------------------------------------------------
-
   int get _answeredCount =>
       _questions.where((q) => _progress.containsKey(q.id)).length;
-
   int get _correctCount =>
       _questions.where((q) => _progress[q.id]?.isCorrect == true).length;
-
   void _goNext() {
-    if (_index < _questions.length - 1) {
+    if (_index < _questions.length - 1)
       setState(() {
         _index++;
         _expanded.clear();
       });
-    }
   }
 
   void _goPrev() {
-    if (_index > 0) {
+    if (_index > 0)
       setState(() {
         _index--;
         _expanded.clear();
       });
-    }
   }
-
-  // -- Build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.lectureName)),
-        body: const Center(child: CircularProgressIndicator(color: kTeal)),
-      );
+          backgroundColor: context.bg,
+          appBar: AppBar(
+              backgroundColor: context.card,
+              foregroundColor: context.textMain,
+              title: Text(widget.lectureName)),
+          body: const Center(child: CircularProgressIndicator(color: kTeal)));
     }
-
     if (_questions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.lectureName)),
-        body: const Center(
-          child: Text(
-            'No questions available for this lecture.',
-            style: TextStyle(color: kSlate500),
-          ),
-        ),
-      );
+          backgroundColor: context.bg,
+          appBar: AppBar(
+              backgroundColor: context.card,
+              foregroundColor: context.textMain,
+              title: Text(widget.lectureName)),
+          body: Center(
+              child: Text('No questions available.',
+                  style: TextStyle(color: context.textSec))));
     }
-
     final currentQ = _questions[_index];
     final qp = _progress[currentQ.id];
     final answered = qp != null;
 
     return Scaffold(
-      backgroundColor: kWhite,
+      backgroundColor: context.card,
       body: SafeArea(
         child: Stack(
-          children: <Widget>[
+          children: [
             Column(
-              children: <Widget>[
-                _buildHeader(currentQ, answered, qp),
+              children: [
+                _buildHeader(currentQ),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
+                      children: [
                         _buildQuestionLabel(answered, qp),
                         const SizedBox(height: 16),
                         Text(
-                          currentQ.text.isEmpty
-                              ? 'Question text not found'
-                              : currentQ.text,
-                          style: TextStyle(
-                            fontSize: _textSize,
-                            fontWeight: FontWeight.w700,
-                            color: kSlate900,
-                            height: 1.4,
-                          ),
-                        ),
+                            currentQ.text.isEmpty
+                                ? 'Question text not found'
+                                : currentQ.text,
+                            style: TextStyle(
+                                fontSize: _textSize,
+                                fontWeight: FontWeight.w700,
+                                color: context.textMain,
+                                height: 1.4)),
                         const SizedBox(height: 24),
-                        ...currentQ.options.asMap().entries.map(
-                              (e) => _buildOptionCard(
-                                  e.value, e.key, answered, qp),
-                            ),
+                        ...currentQ.options.asMap().entries.map((e) =>
+                            _buildOptionCard(e.value, e.key, answered, qp)),
                         const SizedBox(height: 24),
                         _buildActionRow(answered),
                       ],
@@ -2235,77 +2016,51 @@ class _QuizPageState extends State<_QuizPage> {
     );
   }
 
-  // -- Sub-widgets ----------------------------------------------------------
-
-  Widget _buildHeader(Question q, bool answered, _QProgress? qp) {
+  Widget _buildHeader(Question q) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: const BoxDecoration(
-        color: kWhite,
-        border: Border(bottom: BorderSide(color: kSlate100)),
-      ),
+      decoration: BoxDecoration(
+          color: context.card,
+          border: Border(bottom: BorderSide(color: context.border))),
       child: Row(
-        children: <Widget>[
+        children: [
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: kSlate700),
-            onPressed: () => Navigator.pop(context),
-            padding: EdgeInsets.zero,
-          ),
-          const SizedBox(width: 4),
+              icon: Icon(Icons.close_rounded, color: context.textMain),
+              onPressed: () => Navigator.pop(context)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  widget.lectureName,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: kSlate900,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${_index + 1} / ${_questions.length}',
-                  style: const TextStyle(fontSize: 12, color: kSlate400),
-                ),
+              children: [
+                Text(widget.lectureName,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: context.textMain),
+                    overflow: TextOverflow.ellipsis),
+                Text('${_index + 1} / ${_questions.length}',
+                    style: TextStyle(fontSize: 12, color: context.textSec)),
               ],
             ),
           ),
-          // Cycle text size
           IconButton(
-            icon: const Icon(
-              Icons.text_fields_rounded,
-              color: kSlate500,
-              size: 20,
-            ),
-            onPressed: () => setState(() {
-              _textSize = _textSize == 18
+              icon: Icon(Icons.text_fields_rounded,
+                  color: context.textSec, size: 20),
+              onPressed: () => setState(() => _textSize = _textSize == 18
                   ? 22
                   : _textSize == 22
                       ? 15
-                      : 18;
-            }),
-          ),
-          // Bookmark
+                      : 18)),
           IconButton(
-            icon: Icon(
-              _bookmarked[q.id] == true
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
-              color: _bookmarked[q.id] == true ? kTeal : kSlate400,
-            ),
-            onPressed: () => _toggleBookmark(q.id),
-          ),
-          // Question grid
+              icon: Icon(
+                  _bookmarked[q.id] == true
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  color: _bookmarked[q.id] == true ? kTeal : context.textSec),
+              onPressed: () => _toggleBookmark(q.id)),
           IconButton(
-            icon: const Icon(
-              Icons.grid_view_rounded,
-              color: kSlate500,
-              size: 20,
-            ),
-            onPressed: () => setState(() => _showSidebar = true),
-          ),
+              icon: Icon(Icons.grid_view_rounded,
+                  color: context.textSec, size: 20),
+              onPressed: () => setState(() => _showSidebar = true)),
         ],
       ),
     );
@@ -2314,50 +2069,43 @@ class _QuizPageState extends State<_QuizPage> {
   Widget _buildQuestionLabel(bool answered, _QProgress? qp) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: <Widget>[
+      children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: kSlate100,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'Question ${_index + 1}',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              color: kSlate500,
-              letterSpacing: 0.8,
-            ),
-          ),
+              color: context.inputFill,
+              borderRadius: BorderRadius.circular(20)),
+          child: Text('Question ${_index + 1}',
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: context.textSec,
+                  letterSpacing: 0.8)),
         ),
         if (answered && qp != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: qp.isCorrect ? kEmeraldBg : kRedBg,
-              borderRadius: BorderRadius.circular(20),
-            ),
+                color: qp.isCorrect
+                    ? (context.isDark ? const Color(0xFF064E3B) : kEmeraldBg)
+                    : (context.isDark ? const Color(0xFF7F1D1D) : kRedBg),
+                borderRadius: BorderRadius.circular(20)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
+              children: [
                 Icon(
-                  qp.isCorrect
-                      ? Icons.check_circle_outline
-                      : Icons.error_outline,
-                  size: 12,
-                  color: qp.isCorrect ? kEmerald : kRed,
-                ),
+                    qp.isCorrect
+                        ? Icons.check_circle_outline
+                        : Icons.error_outline,
+                    size: 12,
+                    color: qp.isCorrect ? kEmerald : kRed),
                 const SizedBox(width: 4),
-                Text(
-                  qp.isCorrect ? 'Correct' : 'Incorrect',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: qp.isCorrect ? kEmerald : kRed,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                Text(qp.isCorrect ? 'Correct' : 'Incorrect',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: qp.isCorrect ? kEmerald : kRed,
+                        letterSpacing: 0.5)),
               ],
             ),
           ),
@@ -2366,38 +2114,35 @@ class _QuizPageState extends State<_QuizPage> {
   }
 
   Widget _buildOptionCard(
-    QuizOption option,
-    int idx,
-    bool answered,
-    _QProgress? qp,
-  ) {
+      QuizOption option, int idx, bool answered, _QProgress? qp) {
     final isSelected = qp?.selectedOptionId == option.id;
     final isExpanded = _expanded.contains(option.id);
-
-    Color borderColor = kSlate200;
-    Color bgColor = kWhite;
-    Color labelBg = kSlate50;
-    Color labelColor = kSlate400;
+    Color borderColor = context.borderActive;
+    Color bgColor = context.bg;
+    Color labelBg = context.inputFill;
+    Color labelColor = context.textSec;
 
     if (answered) {
       if (option.isCorrect) {
         borderColor = kEmerald;
-        bgColor = const Color(0xFFF0FDF4);
+        bgColor =
+            context.isDark ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4);
         labelBg = kEmerald;
-        labelColor = kWhite;
+        labelColor = Colors.white;
       } else if (isSelected) {
         borderColor = kRed;
-        bgColor = const Color(0xFFFFF5F5);
+        bgColor =
+            context.isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFFF5F5);
         labelBg = kRed;
-        labelColor = kWhite;
+        labelColor = Colors.white;
       } else {
-        borderColor = kSlate100;
-        bgColor = kSlate50;
+        borderColor = context.border;
+        bgColor = context.inputFill;
       }
     }
 
     return Column(
-      children: <Widget>[
+      children: [
         GestureDetector(
           onTap: () => _handleOptionTap(option.id, option.isCorrect),
           child: AnimatedContainer(
@@ -2405,135 +2150,111 @@ class _QuizPageState extends State<_QuizPage> {
             margin: const EdgeInsets.only(bottom: 4),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: bgColor,
-              border: Border.all(color: borderColor, width: 2),
-              borderRadius: BorderRadius.circular(16),
-            ),
+                color: bgColor,
+                border: Border.all(color: borderColor, width: 2),
+                borderRadius: BorderRadius.circular(16)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
+              children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: labelBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                      color: labelBg, borderRadius: BorderRadius.circular(10)),
                   child: Center(
-                    child: Text(
-                      String.fromCharCode(65 + idx),
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: labelColor,
-                      ),
-                    ),
-                  ),
+                      child: Text(String.fromCharCode(65 + idx),
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: labelColor))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      option.text,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: kSlate700,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
+                    child: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(option.text,
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: context.textMain,
+                                height: 1.4)))),
                 if (answered && option.isCorrect)
                   const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(
-                      Icons.check_circle_rounded,
-                      color: kEmerald,
-                      size: 22,
-                    ),
-                  ),
+                      padding: EdgeInsets.only(top: 6),
+                      child: Icon(Icons.check_circle_rounded,
+                          color: kEmerald, size: 22)),
                 if (answered && isSelected && !option.isCorrect)
                   const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Icon(Icons.cancel_rounded, color: kRed, size: 22),
-                  ),
+                      padding: EdgeInsets.only(top: 6),
+                      child: Icon(Icons.cancel_rounded, color: kRed, size: 22)),
               ],
             ),
           ),
         ),
-
-        // Expandable explanation
         AnimatedSize(
           duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
           child: (isExpanded && option.explanation.isNotEmpty)
               ? Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: option.isCorrect
-                        ? const Color(0xFFF0FDF4)
-                        : const Color(0xFFFFF5F5),
+                        ? (context.isDark
+                            ? const Color(0xFF064E3B)
+                            : const Color(0xFFF0FDF4))
+                        : (context.isDark
+                            ? const Color(0xFF7F1D1D)
+                            : const Color(0xFFFFF5F5)),
                     border: Border.all(
-                      color: option.isCorrect
-                          ? const Color(0xFFBBF7D0)
-                          : const Color(0xFFFECACA),
-                    ),
+                        color: option.isCorrect
+                            ? const Color(0xFF059669)
+                            : const Color(0xFFDC2626)),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
+                    children: [
                       Icon(
-                        option.isCorrect
-                            ? Icons.check_circle_outline
-                            : Icons.info_outline,
-                        size: 16,
-                        color: option.isCorrect ? kEmerald : kRed,
-                      ),
+                          option.isCorrect
+                              ? Icons.check_circle_outline
+                              : Icons.info_outline,
+                          size: 16,
+                          color: option.isCorrect ? kEmerald : kRed),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          option.explanation,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: option.isCorrect
-                                ? const Color(0xFF065F46)
-                                : const Color(0xFF7F1D1D),
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
+                          child: Text(option.explanation,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: context.isDark
+                                      ? Colors.white
+                                      : (option.isCorrect
+                                          ? const Color(0xFF065F46)
+                                          : const Color(0xFF7F1D1D)),
+                                  height: 1.5))),
                     ],
                   ),
                 )
               : const SizedBox.shrink(),
         ),
-        const SizedBox(height: 8),
       ],
     );
   }
 
   Widget _buildActionRow(bool answered) => Row(
-        children: <Widget>[
+        children: [
           Expanded(
             child: OutlinedButton.icon(
               onPressed: answered ? _resetQuestion : _showAnswer,
               style: OutlinedButton.styleFrom(
-                foregroundColor: kSlate600,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: const BorderSide(color: kSlate200),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
+                  foregroundColor: context.textMain,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: context.borderActive),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16))),
               icon: Icon(
-                answered ? Icons.refresh_rounded : Icons.visibility_outlined,
-                size: 18,
-              ),
+                  answered ? Icons.refresh_rounded : Icons.visibility_outlined,
+                  size: 18),
               label: Text(answered ? 'Reset' : 'Show Answer'),
             ),
           ),
@@ -2542,22 +2263,18 @@ class _QuizPageState extends State<_QuizPage> {
             child: ElevatedButton(
               onPressed: _index < _questions.length - 1 ? _goNext : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: kSlate900,
-                foregroundColor: kWhite,
-                disabledForegroundColor: kSlate500,
-                disabledBackgroundColor: kSlate200,
+                backgroundColor: context.textMain,
+                foregroundColor: context.bg,
+                disabledBackgroundColor: context.border,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
+                    borderRadius: BorderRadius.circular(16)),
               ),
               child: Text(
-                _index == _questions.length - 1
-                    ? 'Last Question'
-                    : 'Next Question',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
+                  _index == _questions.length - 1
+                      ? 'Last Question'
+                      : 'Next Question',
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ),
         ],
@@ -2565,51 +2282,43 @@ class _QuizPageState extends State<_QuizPage> {
 
   Widget _buildFooter() => Container(
         height: 70,
-        decoration: const BoxDecoration(
-          color: kWhite,
-          border: Border(top: BorderSide(color: kSlate100)),
-        ),
+        decoration: BoxDecoration(
+            color: context.card,
+            border: Border(top: BorderSide(color: context.border))),
         child: Row(
-          children: <Widget>[
+          children: [
             Expanded(
               child: TextButton.icon(
                 onPressed: _index > 0 ? _goPrev : null,
-                style: TextButton.styleFrom(foregroundColor: kSlate600),
+                style: TextButton.styleFrom(foregroundColor: context.textSec),
                 icon: const Icon(Icons.chevron_left_rounded),
-                label: const Text(
-                  'Previous',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
+                label: const Text('Previous',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ),
             ElevatedButton.icon(
               onPressed: () => setState(() => _showSummary = true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFF1F2),
-                foregroundColor: kRed,
+                backgroundColor: context.isDark
+                    ? const Color(0xFF7F1D1D)
+                    : const Color(0xFFFFF1F2),
+                foregroundColor: context.isDark ? kRedBg : kRed,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12)),
               ),
               icon: const Icon(Icons.flag_outlined, size: 16),
-              label: const Text(
-                'End',
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
+              label: const Text('End',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
             ),
             Expanded(
               child: TextButton.icon(
                 onPressed: _index < _questions.length - 1 ? _goNext : null,
                 style: TextButton.styleFrom(foregroundColor: kTeal),
-                icon: const Text(
-                  'Next',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
+                icon: const Text('Next',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
                 label: const Icon(Icons.chevron_right_rounded),
               ),
             ),
@@ -2629,99 +2338,81 @@ class _QuizPageState extends State<_QuizPage> {
               child: Container(
                 width: 300,
                 height: double.infinity,
-                decoration: const BoxDecoration(
-                  color: kSlate50,
-                  borderRadius: BorderRadius.horizontal(
-                    left: Radius.circular(24),
-                  ),
-                ),
+                decoration: BoxDecoration(
+                    color: context.bg,
+                    borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(24))),
                 padding: const EdgeInsets.all(20),
                 child: SafeArea(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
+                    children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          const Text(
-                            'NAVIGATION',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 11,
-                              color: kSlate500,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
+                        children: [
+                          Text('NAVIGATION',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                  color: context.textSec,
+                                  letterSpacing: 1.5)),
                           IconButton(
-                            icon: const Icon(
-                              Icons.close_rounded,
-                              color: kSlate400,
-                            ),
-                            onPressed: () =>
-                                setState(() => _showSidebar = false),
-                          ),
+                              icon: Icon(Icons.close_rounded,
+                                  color: context.textSec),
+                              onPressed: () =>
+                                  setState(() => _showSidebar = false)),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
+                        children: [
                           Text(
-                            '$_answeredCount of ${_questions.length} Answered',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: kSlate600,
-                            ),
-                          ),
+                              '$_answeredCount of ${_questions.length} Answered',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: context.textMain)),
                           Text(
-                            '${_questions.isEmpty ? 0 : ((_answeredCount / _questions.length) * 100).round()}%',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: kTeal,
-                            ),
-                          ),
+                              '${_questions.isEmpty ? 0 : ((_answeredCount / _questions.length) * 100).round()}%',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: kTeal)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: LinearProgressIndicator(
-                          value: _questions.isEmpty
-                              ? 0
-                              : _answeredCount / _questions.length,
-                          minHeight: 8,
-                          backgroundColor: kSlate200,
-                          valueColor:
-                              const AlwaysStoppedAnimation<Color>(kTeal),
-                        ),
+                            value: _questions.isEmpty
+                                ? 0
+                                : _answeredCount / _questions.length,
+                            backgroundColor: context.border,
+                            valueColor:
+                                const AlwaysStoppedAnimation<Color>(kTeal)),
                       ),
                       const SizedBox(height: 16),
                       Expanded(
                         child: GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 5,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                          ),
+                                  crossAxisCount: 5,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8),
                           itemCount: _questions.length,
                           itemBuilder: (_, i) {
                             final q = _questions[i];
                             final qp = _progress[q.id];
                             final isActive = i == _index;
-
-                            Color bg = kWhite;
-                            Color textColor = kSlate500;
-                            Color borderColor = kSlate200;
-
+                            Color bg = context.card;
+                            Color textColor = context.textSec;
+                            Color borderColor = context.borderActive;
                             if (qp != null) {
                               bg = qp.isCorrect ? kEmerald : kRed;
-                              textColor = kWhite;
+                              textColor = Colors.white;
                               borderColor = qp.isCorrect ? kEmerald : kRed;
                             }
-
                             return GestureDetector(
                               onTap: () => setState(() {
                                 _index = i;
@@ -2730,29 +2421,24 @@ class _QuizPageState extends State<_QuizPage> {
                               }),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: bg,
-                                  border: Border.all(
-                                    color: isActive ? kSlate900 : borderColor,
-                                    width: isActive ? 2.5 : 1.5,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                                    color: bg,
+                                    border: Border.all(
+                                        color: isActive
+                                            ? context.textMain
+                                            : borderColor,
+                                        width: isActive ? 2.5 : 1.5),
+                                    borderRadius: BorderRadius.circular(10)),
                                 child: Center(
-                                  child: Text(
-                                    '${i + 1}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
-                                      color: textColor,
-                                    ),
-                                  ),
-                                ),
+                                    child: Text('${i + 1}',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w900,
+                                            color: textColor))),
                               ),
                             );
                           },
                         ),
                       ),
-                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -2761,19 +2447,14 @@ class _QuizPageState extends State<_QuizPage> {
                             _showSummary = true;
                           }),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kRed,
-                            foregroundColor: kWhite,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
+                              backgroundColor: kRed,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14))),
                           icon: const Icon(Icons.logout_rounded, size: 18),
-                          label: const Text(
-                            'End Exam',
-                            style: TextStyle(fontWeight: FontWeight.w800),
-                          ),
+                          label: const Text('End Exam',
+                              style: TextStyle(fontWeight: FontWeight.w800)),
                         ),
                       ),
                     ],
@@ -2788,7 +2469,6 @@ class _QuizPageState extends State<_QuizPage> {
   Widget _buildSummaryModal() {
     final total = _questions.length;
     final score = total > 0 ? ((_correctCount / total) * 100).round() : 0;
-
     return GestureDetector(
       onTap: () => setState(() => _showSummary = false),
       behavior: HitTestBehavior.opaque,
@@ -2801,56 +2481,40 @@ class _QuizPageState extends State<_QuizPage> {
               margin: const EdgeInsets.all(24),
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: kWhite,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: const <BoxShadow>[
-                  BoxShadow(color: Color(0x33000000), blurRadius: 40),
-                ],
-              ),
+                  color: context.card,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x33000000), blurRadius: 40)
+                  ]),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
+                children: [
                   Container(
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCCFBF1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.emoji_events_rounded,
-                      color: kTeal,
-                      size: 40,
-                    ),
+                        color: context.iconBg,
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Icon(Icons.emoji_events_rounded,
+                        color: context.iconColor, size: 40),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Exam Summary',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: kSlate900,
-                    ),
-                  ),
+                  Text('Exam Summary',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: context.textMain)),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Great job completing this session!',
-                    style: TextStyle(color: kSlate500, fontSize: 14),
-                  ),
+                  Text('Great job completing this session!',
+                      style: TextStyle(color: context.textSec, fontSize: 14)),
                   const SizedBox(height: 24),
                   Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: _summaryTile('SCORE', '$score%', kTeal),
-                      ),
+                    children: [
+                      Expanded(child: _summaryTile('SCORE', '$score%', kTeal)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _summaryTile(
-                          'CORRECT',
-                          '$_correctCount/$total',
-                          kSlate900,
-                        ),
-                      ),
+                          child: _summaryTile('CORRECT',
+                              '$_correctCount/$total', context.textMain)),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -2859,33 +2523,24 @@ class _QuizPageState extends State<_QuizPage> {
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kSlate900,
-                        foregroundColor: kWhite,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Return to Lectures',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                          backgroundColor: context.textMain,
+                          foregroundColor: context.bg,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14))),
+                      child: const Text('Return to Lectures',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
                     ),
                   ),
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
-                      onPressed: () => setState(() => _showSummary = false),
-                      child: const Text(
-                        'Review Answers',
-                        style: TextStyle(
-                          color: kSlate500,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                        onPressed: () => setState(() => _showSummary = false),
+                        child: Text('Review Answers',
+                            style: TextStyle(
+                                color: context.textSec,
+                                fontWeight: FontWeight.w700))),
                   ),
                 ],
               ),
@@ -2900,29 +2555,21 @@ class _QuizPageState extends State<_QuizPage> {
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kSlate50,
-          borderRadius: BorderRadius.circular(16),
-        ),
+            color: context.inputFill, borderRadius: BorderRadius.circular(16)),
         child: Column(
-          children: <Widget>[
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: kSlate400,
-                letterSpacing: 1,
-              ),
-            ),
+          children: [
+            Text(label,
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: context.textSec,
+                    letterSpacing: 1)),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: valueColor,
-              ),
-            ),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: valueColor)),
           ],
         ),
       );
@@ -2935,13 +2582,12 @@ class _QuizPageState extends State<_QuizPage> {
 class _BookmarksPage extends StatefulWidget {
   final AuthState auth;
   const _BookmarksPage({required this.auth});
-
   @override
   State<_BookmarksPage> createState() => _BookmarksPageState();
 }
 
 class _BookmarksPageState extends State<_BookmarksPage> {
-  List<Map<String, dynamic>> _items = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _expanded;
 
@@ -2951,68 +2597,47 @@ class _BookmarksPageState extends State<_BookmarksPage> {
     _fetchBookmarks();
   }
 
-  // PART 5 FIX: Fetch bookmarks from "bookmarks" collection where userId == uid.
-  // Uses the exact field names from Firebase: "AddedAt", "questionId",
-  // "questionPath", "userId".  Always displays the bookmark even when question
-  // data cannot be resolved so the list never shows empty incorrectly.
   Future<void> _fetchBookmarks() async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
     setState(() => _loading = true);
-
     try {
       final bSnap = await FirebaseFirestore.instance
           .collection('bookmarks')
           .where('userId', isEqualTo: uid)
           .get();
-
       final items = <Map<String, dynamic>>[];
-
       for (final d in bSnap.docs) {
         final data = d.data();
-        // Field name is exactly "questionId" (lowercase q).
         final questionId = data['questionId'] as String? ?? '';
         if (questionId.isEmpty) continue;
 
         Question? q;
-
-        // 1. Try the saved questionPath first ("questionPath" field).
         final qPath = data['questionPath'] as String?;
         if (qPath != null && qPath.isNotEmpty) {
           try {
             final qSnap = await FirebaseFirestore.instance.doc(qPath).get();
-            if (qSnap.exists) {
-              q = Question.fromMap(qSnap.id, qSnap.data()!);
-            }
+            if (qSnap.exists) q = Question.fromMap(qSnap.id, qSnap.data()!);
           } catch (_) {}
         }
-
-        // 2. Fallback: try top-level questions collection.
         if (q == null) {
           try {
             final qSnap = await FirebaseFirestore.instance
                 .collection('questions')
                 .doc(questionId)
                 .get();
-            if (qSnap.exists) {
-              q = Question.fromMap(qSnap.id, qSnap.data()!);
-            }
+            if (qSnap.exists) q = Question.fromMap(qSnap.id, qSnap.data()!);
           } catch (_) {}
         }
-
-        // 3. Always show the entry – use placeholder if question data unavailable.
-        // Also always add item to avoid incorrectly showing "No bookmarks yet".
-        items.add(<String, dynamic>{
+        items.add({
           'questionId': questionId,
           'question': q ??
               Question(
-                id: questionId,
-                text: 'Question data unavailable',
-                options: const <QuizOption>[],
-              ),
+                  id: questionId,
+                  text: 'Question data unavailable',
+                  options: const []),
         });
       }
-
       setState(() => _items = items);
     } catch (e) {
       debugPrint('Bookmarks fetch error: $e');
@@ -3021,8 +2646,6 @@ class _BookmarksPageState extends State<_BookmarksPage> {
     }
   }
 
-  // PART 5 FIX: Delete bookmark by querying "userId" + "questionId" fields.
-  // Field names match exactly: "userId" and "questionId" (both lowercase start).
   Future<void> _removeBookmark(String questionId) async {
     final uid = widget.auth.user?.uid;
     if (uid == null) return;
@@ -3051,26 +2674,19 @@ class _BookmarksPageState extends State<_BookmarksPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Bookmarks',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: kSlate900,
-              ),
-            ),
+          children: [
+            Text('Bookmarks',
+                style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: context.textMain)),
             const SizedBox(height: 4),
-            const Text(
-              'Your saved questions for review.',
-              style: TextStyle(color: kSlate500, fontSize: 14),
-            ),
+            Text('Your saved questions for review.',
+                style: TextStyle(color: context.textSec, fontSize: 14)),
             const SizedBox(height: 20),
             Expanded(
               child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: kTeal),
-                    )
+                  ? const Center(child: CircularProgressIndicator(color: kTeal))
                   : _items.isEmpty
                       ? _emptyState()
                       : ListView.separated(
@@ -3089,26 +2705,19 @@ class _BookmarksPageState extends State<_BookmarksPage> {
   Widget _emptyState() => Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
+          children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: kSlate50,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.bookmark_border_rounded,
-                size: 36,
-                color: kSlate400,
-              ),
-            ),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                    color: context.inputFill, shape: BoxShape.circle),
+                child: Icon(Icons.bookmark_border_rounded,
+                    size: 36, color: context.textSec)),
             const SizedBox(height: 16),
-            const Text(
-              'No bookmarks yet.\n'
-              'Save questions during a quiz to find them here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: kSlate500, fontSize: 14, height: 1.5),
-            ),
+            Text(
+                'No bookmarks yet.\nSave questions during a quiz to find them here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: context.textSec, fontSize: 14, height: 1.5)),
           ],
         ),
       );
@@ -3120,69 +2729,54 @@ class _BookmarksPageState extends State<_BookmarksPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: kWhite,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kSlate100),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x10000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+          color: context.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: context.border),
+          boxShadow: [
+            BoxShadow(
+                color: context.shadow,
+                blurRadius: 8,
+                offset: const Offset(0, 2))
+          ]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
+        children: [
           ListTile(
             onTap: () => setState(() => _expanded = isOpen ? null : qId),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFCCFBF1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.bookmark_rounded,
-                color: kTeal,
-                size: 20,
-              ),
-            ),
-            title: Text(
-              question.text.isEmpty ? 'Question' : question.text,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: kSlate900,
-              ),
-              maxLines: isOpen ? null : 2,
-              overflow: isOpen ? null : TextOverflow.ellipsis,
-            ),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                    color: context.iconBg,
+                    borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.bookmark_rounded,
+                    color: context.iconColor, size: 20)),
+            title: Text(question.text.isEmpty ? 'Question' : question.text,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.textMain),
+                maxLines: isOpen ? null : 2,
+                overflow: isOpen ? null : TextOverflow.ellipsis),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
+              children: [
                 Icon(
-                  isOpen
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: kSlate400,
-                ),
+                    isOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: context.textSec),
                 IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: kRed,
-                    size: 20,
-                  ),
-                  onPressed: () => _removeBookmark(qId),
-                ),
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: kRed, size: 20),
+                    onPressed: () => _removeBookmark(qId)),
               ],
             ),
           ),
-          if (isOpen) ...<Widget>[
-            const Divider(height: 1, color: kSlate100),
+          if (isOpen) ...[
+            Divider(height: 1, color: context.border),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -3193,42 +2787,38 @@ class _BookmarksPageState extends State<_BookmarksPage> {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: opt.isCorrect ? kEmeraldBg : kSlate50,
-                      border: Border.all(
-                        color: opt.isCorrect ? kEmerald : kSlate100,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                        color: opt.isCorrect
+                            ? (context.isDark
+                                ? const Color(0xFF064E3B)
+                                : kEmeraldBg)
+                            : context.inputFill,
+                        border: Border.all(
+                            color: opt.isCorrect ? kEmerald : context.border),
+                        borderRadius: BorderRadius.circular(12)),
                     child: Row(
-                      children: <Widget>[
-                        Text(
-                          String.fromCharCode(65 + idx),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: opt.isCorrect ? kEmerald : kSlate500,
-                          ),
-                        ),
+                      children: [
+                        Text(String.fromCharCode(65 + idx),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: opt.isCorrect
+                                    ? kEmerald
+                                    : context.textSec)),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            opt.text,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: opt.isCorrect
-                                  ? const Color(0xFF065F46)
-                                  : kSlate700,
-                              fontWeight: opt.isCorrect
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
+                            child: Text(opt.text,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: opt.isCorrect
+                                        ? (context.isDark
+                                            ? Colors.white
+                                            : const Color(0xFF065F46))
+                                        : context.textMain,
+                                    fontWeight: opt.isCorrect
+                                        ? FontWeight.w700
+                                        : FontWeight.w500))),
                         if (opt.isCorrect)
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: kEmerald,
-                            size: 18,
-                          ),
+                          const Icon(Icons.check_circle_rounded,
+                              color: kEmerald, size: 18),
                       ],
                     ),
                   );
@@ -3243,22 +2833,17 @@ class _BookmarksPageState extends State<_BookmarksPage> {
 }
 
 // ===========================================================================
-//  PROFILE PAGE
+//  PROFILE PAGE & SETTINGS SUBPAGES
 // ===========================================================================
 
 class _ProfilePage extends StatefulWidget {
   final AuthState auth;
   const _ProfilePage({required this.auth});
-
   @override
   State<_ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<_ProfilePage> {
-  // FIX 7: Track toggle states so buttons are interactive.
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
-
   @override
   Widget build(BuildContext context) {
     final profile = widget.auth.profile;
@@ -3268,95 +2853,80 @@ class _ProfilePageState extends State<_ProfilePage> {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          children: <Widget>[
+          children: [
             const SizedBox(height: 12),
-
-            // Avatar
             Container(
-              width: 88,
-              height: 88,
-              decoration: const BoxDecoration(
-                color: Color(0xFFCCFBF1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person_rounded, color: kTeal, size: 48),
-            ),
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                    color: context.iconBg, shape: BoxShape.circle),
+                child: Icon(Icons.person_rounded,
+                    color: context.iconColor, size: 48)),
             const SizedBox(height: 12),
-            Text(
-              profile.name,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: kSlate900,
-              ),
-            ),
-            const Text(
-              'Medical Student',
-              style: TextStyle(color: kSlate500, fontSize: 14),
-            ),
+            Text(profile.name,
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: context.textMain)),
+            Text('Medical Student',
+                style: TextStyle(color: context.textSec, fontSize: 14)),
             const SizedBox(height: 28),
-
-            // Account settings
             _sectionCard(
               title: 'Account Settings',
-              children: <Widget>[
+              children: [
                 _profileRow(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Personal Information',
-                  value: profile.name,
-                ),
-                _kDivider,
+                    icon: Icons.person_outline_rounded,
+                    label: 'Personal Information',
+                    value: profile.name),
+                _kDivider(context),
                 _profileRow(
-                  icon: Icons.mail_outline_rounded,
-                  label: 'Email Address',
-                  value: profile.email,
-                ),
-                _kDivider,
+                    icon: Icons.mail_outline_rounded,
+                    label: 'Email Address',
+                    value: profile.email),
+                _kDivider(context),
                 _profileRow(
-                  icon: Icons.business_outlined,
-                  label: 'Department',
-                  value: profile.departmentName.isNotEmpty
-                      ? profile.departmentName
-                      : 'Not Assigned',
-                ),
-                _kDivider,
+                    icon: Icons.business_outlined,
+                    label: 'Department',
+                    value: profile.departmentName.isNotEmpty
+                        ? profile.departmentName
+                        : 'Not Assigned'),
+                _kDivider(context),
                 _profileRow(
-                  icon: Icons.school_outlined,
-                  label: 'Academic Stage',
-                  value: profile.stageName.isNotEmpty
-                      ? profile.stageName
-                      : 'Not Assigned',
-                ),
+                    icon: Icons.school_outlined,
+                    label: 'Academic Stage',
+                    value: profile.stageName.isNotEmpty
+                        ? profile.stageName
+                        : 'Not Assigned'),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Preferences
             _sectionCard(
               title: 'Preferences',
-              children: <Widget>[
-                // FIX 7: Pass live state so tapping actually toggles the switch.
-                _toggleRow(Icons.notifications_outlined, 'Notifications',
-                    _notificationsEnabled, () {
-                  setState(
-                      () => _notificationsEnabled = !_notificationsEnabled);
+              children: [
+                _toggleRow(Icons.dark_mode_outlined, 'Dark Mode',
+                    appSettings.isDarkMode, () {
+                  appSettings.toggleDark(!appSettings.isDarkMode);
                 }),
-                _kDivider,
-                _toggleRow(
-                    Icons.dark_mode_outlined, 'Dark Mode', _darkModeEnabled,
-                    () {
-                  setState(() => _darkModeEnabled = !_darkModeEnabled);
-                }),
-                _kDivider,
+                _kDivider(context),
                 _chevronRow(
-                    context, Icons.shield_outlined, 'Privacy & Security'),
-                _kDivider,
-                _chevronRow(context, Icons.settings_outlined, 'App Settings'),
+                    context, Icons.shield_outlined, 'Privacy & Security', () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              _PrivacySecurityScreen(auth: widget.auth)));
+                }),
+                _kDivider(context),
+                _chevronRow(context, Icons.settings_outlined, 'App Settings',
+                    () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const _AppSettingsScreen()));
+                }),
               ],
             ),
             const SizedBox(height: 20),
-
-            // FIX 7: Sign-out with confirmation dialog.
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -3364,58 +2934,53 @@ class _ProfilePageState extends State<_ProfilePage> {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
+                      backgroundColor: context.card,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      title: const Text(
-                        'Sign Out',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      content: const Text('Are you sure you want to sign out?'),
+                          borderRadius: BorderRadius.circular(20)),
+                      title: Text('Sign Out',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: context.textMain)),
+                      content: Text('Are you sure you want to sign out?',
+                          style: TextStyle(color: context.textSec)),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancel',
-                              style: TextStyle(color: kSlate500)),
-                        ),
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: Text('Cancel',
+                                style: TextStyle(color: context.textSec))),
                         TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Sign Out',
-                              style: TextStyle(
-                                  color: kRed, fontWeight: FontWeight.w800)),
-                        ),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Sign Out',
+                                style: TextStyle(
+                                    color: kRed, fontWeight: FontWeight.w800))),
                       ],
                     ),
                   );
-                  if (confirmed == true) {
-                    await FirebaseAuth.instance.signOut();
-                  }
+                  if (confirmed == true) await FirebaseAuth.instance.signOut();
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: kRed,
-                  side: const BorderSide(color: Color(0xFFFFCDD2)),
+                  side: BorderSide(
+                      color: context.isDark
+                          ? const Color(0xFF7F1D1D)
+                          : const Color(0xFFFFCDD2)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                      borderRadius: BorderRadius.circular(16)),
                 ),
                 icon: const Icon(Icons.logout_rounded),
-                label: const Text(
-                  'Sign Out',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                ),
+                label: const Text('Sign Out',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'SM ACADEMY v1.0.0',
-              style: TextStyle(
-                fontSize: 11,
-                color: kSlate400,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-              ),
-            ),
+            Text('SM ACADEMY v1.0.0',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: context.textSec,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5)),
             const SizedBox(height: 16),
           ],
         ),
@@ -3423,86 +2988,68 @@ class _ProfilePageState extends State<_ProfilePage> {
     );
   }
 
-  // -- Card helpers ---------------------------------------------------------
-
-  Widget _sectionCard({
-    required String title,
-    required List<Widget> children,
-  }) =>
+  Widget _sectionCard(
+          {required String title, required List<Widget> children}) =>
       Container(
         decoration: BoxDecoration(
-          color: kWhite,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kSlate100),
-          boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Color(0x10000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
+            color: context.card,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: context.border),
+            boxShadow: [
+              BoxShadow(
+                  color: context.shadow,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2))
+            ]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
+          children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              child: Text(
-                title.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: kSlate400,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-            const Divider(height: 1, color: kSlate100),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Text(title.toUpperCase(),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: context.textSec,
+                        letterSpacing: 1.5))),
+            Divider(height: 1, color: context.border),
             ...children,
           ],
         ),
       );
 
-  Widget _profileRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) =>
+  Widget _profileRow(
+          {required IconData icon,
+          required String label,
+          required String value}) =>
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
-          children: <Widget>[
+          children: [
             Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: kSlate100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: kSlate500),
-            ),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    color: context.inputFill,
+                    borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, size: 18, color: context.textSec)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: kSlate400,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                children: [
+                  Text(label.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: context.textSec,
+                          letterSpacing: 0.5)),
                   const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: kSlate700,
-                    ),
-                  ),
+                  Text(value,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: context.textMain)),
                 ],
               ),
             ),
@@ -3510,7 +3057,6 @@ class _ProfilePageState extends State<_ProfilePage> {
         ),
       );
 
-  // FIX 7: _toggleRow now accepts an onTap callback so the switch is interactive.
   Widget _toggleRow(
           IconData icon, String label, bool enabled, VoidCallback onTap) =>
       GestureDetector(
@@ -3518,126 +3064,346 @@ class _ProfilePageState extends State<_ProfilePage> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
-            children: <Widget>[
+            children: [
               Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: kSlate100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 18, color: kSlate500),
-              ),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: context.inputFill,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Icon(icon, size: 18, color: context.textSec)),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      label.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: kSlate400,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      enabled ? 'Enabled' : 'Disabled',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: kSlate700,
-                      ),
-                    ),
+                  children: [
+                    Text(label.toUpperCase(),
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: context.textSec,
+                            letterSpacing: 0.5)),
+                    Text(enabled ? 'Enabled' : 'Disabled',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: context.textMain)),
                   ],
                 ),
               ),
-              // Interactive toggle switch.
-              GestureDetector(
-                onTap: onTap,
-                child: Container(
-                  width: 42,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: enabled ? kTeal : kSlate200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: AnimatedAlign(
+              Container(
+                width: 42,
+                height: 24,
+                decoration: BoxDecoration(
+                    color: enabled ? kTeal : context.borderActive,
+                    borderRadius: BorderRadius.circular(12)),
+                child: AnimatedAlign(
                     duration: const Duration(milliseconds: 200),
                     alignment:
                         enabled ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      width: 18,
-                      height: 18,
-                      margin: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: kWhite,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
+                        width: 18,
+                        height: 18,
+                        margin: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle))),
               ),
             ],
           ),
         ),
       );
 
-  // FIX 7: _chevronRow now accepts BuildContext and shows an informational dialog on tap.
-  Widget _chevronRow(BuildContext context, IconData icon, String label) =>
+  Widget _chevronRow(BuildContext context, IconData icon, String label,
+          VoidCallback onTap) =>
       GestureDetector(
-        onTap: () {
-          showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              content: Text(
-                '$label settings will be available in a future update.',
-                style: const TextStyle(color: kSlate500),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK',
-                      style:
-                          TextStyle(color: kTeal, fontWeight: FontWeight.w800)),
-                ),
-              ],
-            ),
-          );
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
-            children: <Widget>[
+            children: [
               Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: kSlate100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 18, color: kSlate500),
-              ),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: context.inputFill,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Icon(icon, size: 18, color: context.textSec)),
               const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: kSlate700,
-                  ),
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: kSlate400),
+                  child: Text(label,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: context.textMain))),
+              Icon(Icons.chevron_right_rounded, color: context.textSec),
             ],
           ),
         ),
       );
+}
+
+class _PrivacySecurityScreen extends StatefulWidget {
+  final AuthState auth;
+  const _PrivacySecurityScreen({required this.auth});
+  @override
+  State<_PrivacySecurityScreen> createState() => _PrivacySecurityScreenState();
+}
+
+class _PrivacySecurityScreenState extends State<_PrivacySecurityScreen> {
+  final _nameCtrl = TextEditingController();
+  final _currentPassCtrl = TextEditingController();
+  final _newPassCtrl = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl.text = widget.auth.profile?.name ?? '';
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: isError ? kRed : kTeal));
+  }
+
+  Future<void> _updateName() async {
+    final newName = _nameCtrl.text.trim();
+    if (newName.isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.auth.user!.uid)
+          .update({'name': newName});
+      _showSnack('Name updated successfully');
+    } catch (e) {
+      _showSnack('Failed to update name', isError: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _updatePassword() async {
+    final curPass = _currentPassCtrl.text;
+    final newPass = _newPassCtrl.text;
+    if (curPass.isEmpty || newPass.isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      final user = FirebaseAuth.instance.currentUser!;
+      final cred =
+          EmailAuthProvider.credential(email: user.email!, password: curPass);
+      await user.reauthenticateWithCredential(cred);
+      await user.updatePassword(newPass);
+      _currentPassCtrl.clear();
+      _newPassCtrl.clear();
+      _showSnack('Password updated successfully');
+    } catch (e) {
+      _showSnack('Failed to update password. Check current password.',
+          isError: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.bg,
+      appBar: AppBar(
+          backgroundColor: context.card,
+          foregroundColor: context.textMain,
+          title: const Text('Privacy & Security')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Update Profile',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: context.textMain)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  color: context.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.border)),
+              child: Column(
+                children: [
+                  _labeledField(context,
+                      controller: _nameCtrl,
+                      label: 'Full Name',
+                      hint: 'Your Name',
+                      icon: Icons.person_outline),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _updateName,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: kTeal,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Save Name',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text('Change Password',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: context.textMain)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                  color: context.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: context.border)),
+              child: Column(
+                children: [
+                  _labeledField(context,
+                      controller: _currentPassCtrl,
+                      label: 'Current Password',
+                      hint: '••••••••',
+                      icon: Icons.lock_outline,
+                      obscure: true),
+                  const SizedBox(height: 16),
+                  _labeledField(context,
+                      controller: _newPassCtrl,
+                      label: 'New Password',
+                      hint: '••••••••',
+                      icon: Icons.lock_reset,
+                      obscure: true),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _updatePassword,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: context.textMain,
+                          foregroundColor: context.bg,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Update Password',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AppSettingsScreen extends StatefulWidget {
+  const _AppSettingsScreen();
+  @override
+  State<_AppSettingsScreen> createState() => _AppSettingsScreenState();
+}
+
+class _AppSettingsScreenState extends State<_AppSettingsScreen> {
+  bool _clearingCache = false;
+
+  void _clearCache() async {
+    setState(() => _clearingCache = true);
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
+      setState(() => _clearingCache = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('App cache cleared successfully.'),
+          backgroundColor: kTeal));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: appSettings,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: context.bg,
+          appBar: AppBar(
+              backgroundColor: context.card,
+              foregroundColor: context.textMain,
+              title: const Text('App Settings')),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                    color: context.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.border)),
+                child: Column(
+                  children: [
+                    _buildToggle(
+                        context,
+                        'Download over Wi-Fi Only',
+                        'Save cellular data',
+                        appSettings.wifiOnly,
+                        appSettings.toggleWifi),
+                    _kDivider(context),
+                    _buildToggle(
+                        context,
+                        'Lecture Notifications',
+                        'Get alerts for new materials',
+                        appSettings.notifications,
+                        appSettings.toggleNotif),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _clearingCache ? null : _clearCache,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.textMain,
+                    side: BorderSide(color: context.borderActive),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  icon: _clearingCache
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.delete_sweep_outlined),
+                  label: Text(
+                      _clearingCache ? 'Clearing...' : 'Clear App Cache',
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildToggle(BuildContext context, String title, String subtitle,
+      bool value, Function(bool) onChanged) {
+    return SwitchListTile(
+      title: Text(title,
+          style:
+              TextStyle(fontWeight: FontWeight.w700, color: context.textMain)),
+      subtitle: Text(subtitle,
+          style: TextStyle(color: context.textSec, fontSize: 12)),
+      value: value,
+      activeColor: kTeal,
+      onChanged: onChanged,
+    );
+  }
 }
