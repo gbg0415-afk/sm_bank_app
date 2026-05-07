@@ -82,7 +82,7 @@ extension ThemeColors on BuildContext {
   Color get inputFill => isDark ? const Color(0xFF0F172A) : kSlate50;
   Color get iconBg =>
       isDark ? const Color(0xFF134E4A) : const Color(0xFFCCFBF1);
-  Color get iconColor => textMain;
+  Color get iconColor => isDark ? kWhite : kTeal;
   Color get shadow => isDark ? Colors.black54 : const Color(0x18000000);
 }
 
@@ -792,7 +792,7 @@ class _RegisterScreenState extends State<_RegisterScreen> {
                 color: context.textMain)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: enabled ? onChanged : null,
           items: items,
           isExpanded: true,
@@ -1056,7 +1056,7 @@ class _MainShellState extends State<_MainShell> {
 }
 
 // ===========================================================================
-//  HOME PAGE (UPDATED ACCURATE STATS)
+//  HOME PAGE (UPDATED QUOTA-SAFE STATS)
 // ===========================================================================
 
 class _HomePage extends StatefulWidget {
@@ -1067,72 +1067,51 @@ class _HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<_HomePage> {
-  bool _loadingStats = true;
-  int _totalSubjects = 0;
-  int _totalAvailableQuestions = 0;
-  int _attemptedQuestions = 0;
+  StreamSubscription<QuerySnapshot>? _progressSub;
   int _correctAnswers = 0;
-  int _incorrectAnswers = 0;
-  int _truePercentage = 0;
+  bool _loadingStats = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAccurateStats();
+    _initProgressStream();
   }
 
-  Future<void> _loadAccurateStats() async {
+  // Quota Protection: Initialized ONLY ONCE in initState, tracking updates instantly
+  // via stream without performing exhaustive nested reads across all subjects/lectures.
+  void _initProgressStream() {
     final uid = widget.auth.user?.uid;
-    final profile = widget.auth.profile;
-    if (uid == null || profile == null) return;
-
-    try {
-      _totalSubjects = profile.assignedSubjects.length;
-
-      // 1. Fetch attempted and correct counts
-      final progSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('progress')
-          .get();
-      _attemptedQuestions = progSnap.docs.length;
-      _correctAnswers =
-          progSnap.docs.where((d) => d.data()['isCorrect'] == true).length;
-      _incorrectAnswers = _attemptedQuestions - _correctAnswers;
-
-      // 2. Aggregate total questions available across all assigned subjects
-      int tq = 0;
-      for (var sub in profile.assignedSubjects) {
-        final lecSnap = await FirebaseFirestore.instance
-            .collection('departments')
-            .doc(sub.departmentId)
-            .collection('years')
-            .doc(sub.stageId)
-            .collection('subjects')
-            .doc(sub.subjectId)
-            .collection('lectures')
-            .get();
-
-        for (var lec in lecSnap.docs) {
-          try {
-            final qCount =
-                await lec.reference.collection('questions').count().get();
-            tq += qCount.count ?? 0;
-          } catch (_) {}
-        }
-      }
-      _totalAvailableQuestions = tq;
-      if (_totalAvailableQuestions > 0) {
-        _truePercentage =
-            ((_attemptedQuestions / _totalAvailableQuestions) * 100).round();
-      } else {
-        _truePercentage = 0;
-      }
-    } catch (e) {
-      debugPrint('Stats Error: $e');
-    } finally {
+    if (uid == null) {
       if (mounted) setState(() => _loadingStats = false);
+      return;
     }
+
+    _progressSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('progress')
+        .snapshots()
+        .listen((snap) {
+      int correct = 0;
+      for (var doc in snap.docs) {
+        if (doc.data()['isCorrect'] == true) correct++;
+      }
+      if (mounted) {
+        setState(() {
+          _correctAnswers = correct;
+          _loadingStats = false;
+        });
+      }
+    }, onError: (e) {
+      debugPrint('Progress stream error: $e');
+      if (mounted) setState(() => _loadingStats = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _progressSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -1140,9 +1119,22 @@ class _HomePageState extends State<_HomePage> {
     final profile = widget.auth.profile;
     if (profile == null) return const SizedBox.shrink();
 
-    final double progressVal = _totalAvailableQuestions > 0
-        ? (_attemptedQuestions / _totalAvailableQuestions)
+    // Data Mapping: Sourced securely from profile.stats (streamed inherently in AuthState).
+    final int totalSubjects = profile.assignedSubjects.length;
+    final int totalAvailableQuestions = profile.stats.totalQuestions;
+    final int attemptedQuestions = profile.stats.usedQuestions;
+
+    // Calculates incorrect answers cleanly
+    final int incorrectAnswers = (attemptedQuestions - _correctAnswers)
+        .clamp(0, attemptedQuestions)
+        .toInt();
+
+    // Math Safety: Prevention of div/zero and percentage capping applied
+    final double progressVal = (totalAvailableQuestions > 0)
+        ? (attemptedQuestions / totalAvailableQuestions).clamp(0.0, 1.0)
         : 0.0;
+
+    final int truePercentage = (progressVal * 100).round();
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -1216,7 +1208,7 @@ class _HomePageState extends State<_HomePage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '$_truePercentage%',
+                              '$truePercentage%',
                               style: TextStyle(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w900,
@@ -1237,7 +1229,7 @@ class _HomePageState extends State<_HomePage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "You've completed $_attemptedQuestions out of $_totalAvailableQuestions questions. Keep going!",
+                    "You've completed $attemptedQuestions out of $totalAvailableQuestions questions. Keep going!",
                     style: TextStyle(
                         color: context.textSec, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
@@ -1262,7 +1254,7 @@ class _HomePageState extends State<_HomePage> {
                   _statCard(
                       icon: Icons.library_books,
                       label: 'Assigned Subjects',
-                      value: '$_totalSubjects',
+                      value: '$totalSubjects',
                       color: const Color(0xFF3B82F6),
                       bgColor: context.isDark
                           ? const Color(0xFF1E3A8A)
@@ -1270,7 +1262,7 @@ class _HomePageState extends State<_HomePage> {
                   _statCard(
                       icon: Icons.format_list_numbered,
                       label: 'Total Questions',
-                      value: '$_totalAvailableQuestions',
+                      value: '$totalAvailableQuestions',
                       color: const Color(0xFF8B5CF6),
                       bgColor: context.isDark
                           ? const Color(0xFF4C1D95)
@@ -1278,7 +1270,7 @@ class _HomePageState extends State<_HomePage> {
                   _statCard(
                       icon: Icons.edit_note,
                       label: 'Attempted',
-                      value: '$_attemptedQuestions',
+                      value: '$attemptedQuestions',
                       color: const Color(0xFFF59E0B),
                       bgColor: context.isDark
                           ? const Color(0xFF78350F)
@@ -1294,7 +1286,7 @@ class _HomePageState extends State<_HomePage> {
                   _statCard(
                       icon: Icons.cancel_outlined,
                       label: 'Incorrect',
-                      value: '$_incorrectAnswers',
+                      value: '$incorrectAnswers',
                       color: kRed,
                       bgColor: context.isDark
                           ? const Color(0xFF7F1D1D)
@@ -1302,7 +1294,7 @@ class _HomePageState extends State<_HomePage> {
                   _statCard(
                       icon: Icons.percent_rounded,
                       label: 'True Score',
-                      value: '$_truePercentage%',
+                      value: '$truePercentage%',
                       color: kTeal,
                       bgColor: context.isDark
                           ? const Color(0xFF134E4A)
@@ -1866,10 +1858,11 @@ class _QuizPageState extends State<_QuizPage> {
         ..add(optionId));
     } else {
       setState(() {
-        if (_expanded.contains(optionId))
+        if (_expanded.contains(optionId)) {
           _expanded.remove(optionId);
-        else
+        } else {
           _expanded.add(optionId);
+        }
       });
     }
   }
@@ -3402,7 +3395,7 @@ class _AppSettingsScreenState extends State<_AppSettingsScreen> {
       subtitle: Text(subtitle,
           style: TextStyle(color: context.textSec, fontSize: 12)),
       value: value,
-      activeColor: kTeal,
+      activeThumbColor: kTeal,
       onChanged: onChanged,
     );
   }
